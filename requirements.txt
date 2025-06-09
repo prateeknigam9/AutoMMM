@@ -6,3 +6,8 @@ python-dotenv
 matplotlib
 scipy
 openpyxl
+crewai
+crewai-tools    
+langgraph-cli[inmem]
+langchain_community
+langchain_openai
