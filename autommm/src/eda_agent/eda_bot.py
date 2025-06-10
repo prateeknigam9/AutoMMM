@@ -255,7 +255,7 @@ eda_report_builder.add_edge("aggregator","formatter")
 eda_report_builder.add_edge("formatter", END)
 eda_report_builder.add_edge("gen_data_profile", END)
 
-graph = eda_report_builder.compile()
+eda_report_workflow = eda_report_builder.compile()
 
 # display(Image(eda_report.get_graph().draw_mermaid_png()))
 
