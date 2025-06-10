@@ -1,7 +1,8 @@
 {
-    "dependencies": ["./notebooks"],
+    "dependencies": ["./autommm"],
     "graphs": {
-      "agent": "./notebooks/agent.py:graph"
+      "agent": "./autommm/src/eda_agent/eda_bot.py:graph"
     },
     "env": ".env"
+
   }

@@ -1,3 +1,4 @@
 .langgraph_api/*
 *.pyc
 .env
+outputs/*

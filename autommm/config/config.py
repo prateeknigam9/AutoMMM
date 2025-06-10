@@ -3,10 +3,12 @@ import os
 
 configuration = {
     # "master_data" : r"C:\Users\nigam\OneDrive\Documents\university_classes\AutoMMM\data\manual_data.xlsx",
-    "master_data": os.path.join(os.path.dirname(__file__), "..", "data", "manual_data.xlsx"),
+    "master_data_path": os.path.join(os.path.dirname(__file__), "..", "data", "manual_data.xlsx"),
     "sheet_name" : "master_data",
     "model" : "gemma2-9b-it", #"gemma2-9b-it", # llama3-70b-8192, llama-3.3-70b-versatile, compound-beta-mini
-    "python310_executable" : "python3.10",
+    "python310_executable" : "C:/Users/nigam/anaconda3/envs/agenticAI/python.exe",
+    "data_profile_path" : "outputs/data_profile.html",
+    "eda_report_path" : "outputs/data_report.md",
     "data_description" : {
             "date" : "Date column",
             "sku"	: "product identification number (stock keeping unit)",

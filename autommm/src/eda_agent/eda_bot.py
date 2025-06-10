@@ -1,9 +1,6 @@
 import os
-from config import process_configuration
-
-
-
-from dotenv import load_dotenv
+from autommm.config.process_configuration import process_config
+from autommm.config import configuration
 
 from langchain_core.tools import tool
 import pandas as pd
@@ -18,23 +15,16 @@ from IPython.display import Markdown, Image
 from langchain_experimental.utilities import PythonREPL
 
 from langgraph.graph import START, END, StateGraph
-
-load_dotenv()
-
-os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
-os.environ['LANGSMITH_API_KEY'] = os.getenv("LANGSMITH_API_KEY")
-os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
+import subprocess
 
 
+config = process_config(configuration)
 
-
-
-config = process_configuration
-
-df = config['master_data'] #.to_json(orient="split")
+df = config['master_data'] 
 llm = config['llm']
-column_descriptions = config['column_descriptions']
-
+data_description = config['data_description']
+python310_executable = config['python310_executable']
+data_profile_path = config['data_profile_path']
 
 repl = PythonREPL()
 
@@ -57,6 +47,7 @@ def python_repl_tool(code: Annotated[str, "The python code to execute to generat
         result_str + "\n\nIf you have completed all tasks, respond with FINAL ANSWER."
     )
 
+
 class ReportState(TypedDict):
     input : str
     overview : str
@@ -65,10 +56,18 @@ class ReportState(TypedDict):
         ]
     final_report : str
     formatted_report: str
+    profile_report : str
 
-class skuReport(TypedDict):
-    sales: str
-
+def gen_data_profile(state: ReportState):
+    """Run profile_report.py to generate a data profiling report using Python 3.10."""
+    try:
+        subprocess.check_call(["python", os.path.join("autommm","src","eda_agent","data_profiling.py")])
+        # subprocess.call(['C:/Users/nigam/anaconda3/envs/agenticAI/python.exe', os.path.join("autommm","src","eda_agent","data_profiling.py")])
+        profile_output = f"Data profiling report generated at: {data_profile_path}"
+    except subprocess.CalledProcessError as e:
+        profile_output = f"Failed to generate profiling report. Error: {repr(e)}"
+    
+    return {'profile_report': profile_output}
 
 def data_overview(state: ReportState):
     backstory = """
@@ -136,7 +135,6 @@ def sku_overview(state: ReportState, sku:str):
     ])
     return {'sku_overview' : [sku_overview.content]}
 
-
 def data_vizualizer(state: ReportState, sku:str):
     llm_with_code_runner = llm.bind_tools([python_repl_tool])
     backstory = """
@@ -195,7 +193,6 @@ def aggregator(state: ReportState):
     """
     return {'final_report' : combined_report}
 
-
 def formatter(state: ReportState):
     backstory = """
     You are an expert technical writer and Markdown formatter. A detailed data analysis report has been generated, 
@@ -235,8 +232,8 @@ def formatter(state: ReportState):
 
 eda_report_builder = StateGraph(ReportState)
 
-
 eda_report_builder.add_node("data_overview", data_overview)
+eda_report_builder.add_node("gen_data_profile", gen_data_profile)
 eda_report_builder.add_node("sku_overview_a", lambda state: sku_overview(state, sku='sku_a'))
 eda_report_builder.add_node("sku_overview_b", lambda state: sku_overview(state, sku='sku_b'))
 eda_report_builder.add_node("sku_overview_c", lambda state: sku_overview(state, sku='sku_c'))
@@ -244,27 +241,22 @@ eda_report_builder.add_node("aggregator",aggregator)
 eda_report_builder.add_node("formatter",formatter)
 
 eda_report_builder.add_edge(START,"data_overview")
+eda_report_builder.add_edge(START,"gen_data_profile")
 eda_report_builder.add_edge(START,"sku_overview_a")
 eda_report_builder.add_edge(START,"sku_overview_b")
 eda_report_builder.add_edge(START,"sku_overview_c")
-
 
 eda_report_builder.add_edge("data_overview","aggregator")
 eda_report_builder.add_edge("sku_overview_a","aggregator")
 eda_report_builder.add_edge("sku_overview_b","aggregator")
 eda_report_builder.add_edge("sku_overview_c","aggregator")
-
 eda_report_builder.add_edge("aggregator","formatter")
 
 eda_report_builder.add_edge("formatter", END)
+eda_report_builder.add_edge("gen_data_profile", END)
 
 graph = eda_report_builder.compile()
 
 # display(Image(eda_report.get_graph().draw_mermaid_png()))
 
 
-response = graph.invoke({"input" :"generate the report"})
-
-# Save the output to a Markdown file
-output_path = Path("llm_output.md")
-output_path.write_text(f"# LLM Response\n\n{response['formatted_report'].content}", encoding="utf-8")
