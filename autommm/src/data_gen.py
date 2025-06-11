@@ -6,6 +6,8 @@ import seaborn as sns
 from pymc_marketing.mmm.transformers import geometric_adstock, logistic_saturation
 import random
 from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 import sys
 import os
@@ -36,11 +38,12 @@ data_gen_params = {
     # Coefficients for every kpi for every product
     "kpi_coefs": {
         "product_level": {
-            "branded": {"premium": 6, "mid_tier": 5, "low_tier": 2},
-            "nonbranded": {"premium": 7, "mid_tier": 9, "low_tier": 4},
-            # "oos": {"premium": 7, "mid_tier": 9, "low_tier": 4},
+            "branded": {"premium": 15, "mid_tier": 10, "low_tier": 8},
+            "nonbranded": {"premium": 12, "mid_tier": 9, "low_tier": 7},
+            "price": {"premium": -0.5, "mid_tier": -0.4, "low_tier": -0.3},  
+            "oos": {"premium": -1.2, "mid_tier": -0.8, "low_tier": -0.5},  
         },
-        "brand_level": {"insta": 1.2, "fb": 0.8},
+        "brand_level": {"insta": 2.5, "fb": 2.0},
     },
 }
 
@@ -59,6 +62,24 @@ def apply_adstock(df_col: pd.Series, alpha: float):
 
 def apply_saturation(df_col: pd.Series, lambda_: float):
     return logistic_saturation(x=df_col.to_numpy(), lam=lambda_).eval()
+
+
+def generate_price_list(avg_price: float, n_rows: int, std_dev_factor: float = 0.05):
+    std_dev = avg_price * std_dev_factor
+    prices = np.random.normal(loc=avg_price, scale=std_dev, size=n_rows)
+    prices = np.clip(prices, 0.01, None)  # Avoid zero or negative prices
+
+    price_list = np.round(prices, 2).tolist()
+    log_price_list = np.round(np.log(prices), 4).tolist()
+
+    return price_list, log_price_list
+
+
+def oos_gen(n_rows: int):
+    oos_days = np.random.choice([1, 2, 3, 4, 5, 6, 7], size=(n_rows,)) * np.random.choice(
+        [0, 1], size=(n_rows,), p=[7.0 / 10, 3.0 / 10]
+    )
+    return oos_days/7
 
 
 # for indiv sku
@@ -95,8 +116,11 @@ def data_gen_for_one_sku(config: dict):
             df_col=df[kpi + "_clicks_adstock"], lambda_=random.choice(random_lambda)
         )
 
+    df["oos"] = oos_gen(n_rows=n)
+
     # Trend and seasonal component
     df["trend"] = (np.linspace(start=0.0, stop=50, num=n) + 10) ** (1 / 4) - 1
+    # df["trend"] = (np.linspace(start=0.0, stop=50, num=n) + 15) ** 0.5
 
     df["cs"] = -np.sin(2 * 2 * np.pi * df["dayofyear"] / 365.5)
     df["cc"] = np.cos(1 * 2 * np.pi * df["dayofyear"] / 365.5)
@@ -106,7 +130,7 @@ def data_gen_for_one_sku(config: dict):
     df["event"] = df["date_week"].isin(config["events"]).astype(float)
 
     # individual product property
-    df["intercept"] = random.choice([2.0, 3.0, 5.0])
+    df["intercept"] = random.choice([15.0, 20.0, 25.0]) 
     df["epsilon"] = rng.normal(loc=0.0, scale=0.25, size=n)
 
     return df
@@ -114,6 +138,7 @@ def data_gen_for_one_sku(config: dict):
 
 def brand_level_data(config: dict, n_rows: int):
     brand_df = pd.DataFrame()
+
     # brand level Media Kpis
     random_drop = [0, 1 / 2, 1 / 3, 1 / 4]
     random_alpha = [0, 0.4, 0.2, 0.3]
@@ -135,7 +160,10 @@ def brand_level_data(config: dict, n_rows: int):
 
 
 # TODO : price, OOS
-def generate_synthetic_data(config: dict, n_rows: int) -> pd.DataFrame:
+def generate_synthetic_data(config: dict) -> pd.DataFrame:
+    n_rows = pd.date_range(config["min_date"], config["max_date"], freq="W-SAT").shape[
+        0
+    ]
     brand_data = brand_level_data(config, n_rows)
     data_frames = []
 
@@ -144,7 +172,13 @@ def generate_synthetic_data(config: dict, n_rows: int) -> pd.DataFrame:
     ):
         df = data_gen_for_one_sku(config)
         df["product_id"] = product_id
-        df["avg_price"] = avg_price
+
+        # Price
+        price_list, log_price_list = generate_price_list(
+            avg_price=avg_price, n_rows=n_rows
+        )
+        df["price"] = price_list
+        df["log_price"] = log_price_list
 
         complete_data = pd.concat([df, brand_data], axis=1)
 
@@ -153,7 +187,7 @@ def generate_synthetic_data(config: dict, n_rows: int) -> pd.DataFrame:
             complete_data["intercept"]
             + complete_data["trend"]
             + complete_data["seasonality"]
-            + 1.5 * complete_data["event"]
+            + 3 * complete_data["event"]
             + complete_data["epsilon"]
         )
 
@@ -161,16 +195,21 @@ def generate_synthetic_data(config: dict, n_rows: int) -> pd.DataFrame:
         for kpi, tiers in config["kpi_coefs"]["product_level"].items():
             if product_id in tiers:
                 coef = tiers[product_id]
-                units_sold += coef * complete_data[f"{kpi}_clicks_adstock_saturated"]
+                if kpi == "price":
+                    units_sold += coef * complete_data["log_price"]
+                elif kpi == "oos":
+                    units_sold += coef * complete_data["oos"]
+                else:
+                    units_sold += (
+                        coef * complete_data[f"{kpi}_clicks_adstock_saturated"]
+                    )
 
         # Apply brand-level KPIs
         for kpi, coef in config["kpi_coefs"]["brand_level"].items():
             units_sold += coef * complete_data[f"{kpi}_clicks_adstock_saturated"]
 
         complete_data["units_sold"] = units_sold
-        complete_data["revenue"] = (
-            complete_data["units_sold"] * complete_data["avg_price"]
-        )
+        complete_data["revenue"] = complete_data["units_sold"] * complete_data["price"]
 
         data_frames.append(complete_data)
 
@@ -178,7 +217,7 @@ def generate_synthetic_data(config: dict, n_rows: int) -> pd.DataFrame:
 
 
 def main():
-    synthetic_data = generate_synthetic_data(config=data_gen_params, n_rows=104)
+    synthetic_data = generate_synthetic_data(config=data_gen_params)
     synthetic_data.to_excel("autommm/data/synthetic_data.xlsx", index=False)
     print("Synthetic data saved to 'data/synthetic_data.xlsx'.")
 
