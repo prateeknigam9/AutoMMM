@@ -47,7 +47,6 @@ def python_repl_tool(code: Annotated[str, "The python code to execute to generat
         result_str + "\n\nIf you have completed all tasks, respond with FINAL ANSWER."
     )
 
-
 class ReportState(TypedDict):
     input : str
     overview : str
@@ -200,7 +199,7 @@ def formatter(state: ReportState):
     This report is meant to be shared with stakeholders and collaborators. Therefore, it needs to be reformatted for clarity, professionalism, and readability — using Markdown.
     """
     instruction = """
-    Your task is to convert the raw text report into a properly structured Markdown document.
+    Your task is to convert the raw text report into a properly structured infographic Markdown document.
 
     Apply the following formatting guidelines:
     1. Convert `\\n` into actual line breaks.
