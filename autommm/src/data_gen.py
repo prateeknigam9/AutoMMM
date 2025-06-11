@@ -37,7 +37,7 @@ data_gen_params = {
     "kpi_coefs": {
         "product_level": {
             "branded": {"premium": 6, "mid_tier": 5, "low_tier": 2},
-            "nonbranded": {"premium": 7, "mid_tier": 9, "low_tier": 4}
+            "nonbranded": {"premium": 7, "mid_tier": 9, "low_tier": 4},
             # "oos": {"premium": 7, "mid_tier": 9, "low_tier": 4},
         },
         "brand_level": {"insta": 1.2, "fb": 0.8},
@@ -112,13 +112,13 @@ def data_gen_for_one_sku(config: dict):
     return df
 
 
-def brand_level_data(config:dict, n_rows: int):
+def brand_level_data(config: dict, n_rows: int):
     brand_df = pd.DataFrame()
     # brand level Media Kpis
     random_drop = [0, 1 / 2, 1 / 3, 1 / 4]
     random_alpha = [0, 0.4, 0.2, 0.3]
     random_lambda = [1, 2, 3, 4, 5]
-    for kpi, cpc in config["kpis"]["brand_level"].items():            
+    for kpi, cpc in config["kpis"]["brand_level"].items():
         x = gen_rand_media_scaled(n_rows=n_rows)
         prop = random.choice(random_drop)
         brand_df[kpi + "_clicks"] = np.where(x > 0.9, x, x * prop)
@@ -128,10 +128,10 @@ def brand_level_data(config:dict, n_rows: int):
             df_col=brand_df[kpi + "_clicks"], alpha=random.choice(random_alpha)
         )
         brand_df[kpi + "_clicks_adstock_saturated"] = apply_saturation(
-            df_col=brand_df[kpi + "_clicks_adstock"], lambda_=random.choice(random_lambda)
+            df_col=brand_df[kpi + "_clicks_adstock"],
+            lambda_=random.choice(random_lambda),
         )
     return brand_df
-
 
 
 # TODO : price, OOS
@@ -139,7 +139,9 @@ def generate_synthetic_data(config: dict, n_rows: int) -> pd.DataFrame:
     brand_data = brand_level_data(config, n_rows)
     data_frames = []
 
-    for product_id, avg_price in tqdm(config["products"].items(), desc="Generating data"):
+    for product_id, avg_price in tqdm(
+        config["products"].items(), desc="Generating data"
+    ):
         df = data_gen_for_one_sku(config)
         df["product_id"] = product_id
         df["avg_price"] = avg_price
@@ -166,7 +168,9 @@ def generate_synthetic_data(config: dict, n_rows: int) -> pd.DataFrame:
             units_sold += coef * complete_data[f"{kpi}_clicks_adstock_saturated"]
 
         complete_data["units_sold"] = units_sold
-        complete_data["revenue"] = complete_data["units_sold"] * complete_data["avg_price"]
+        complete_data["revenue"] = (
+            complete_data["units_sold"] * complete_data["avg_price"]
+        )
 
         data_frames.append(complete_data)
 
@@ -174,7 +178,7 @@ def generate_synthetic_data(config: dict, n_rows: int) -> pd.DataFrame:
 
 
 def main():
-    synthetic_data = generate_synthetic_data(config=data_gen_params,n_rows=104)
+    synthetic_data = generate_synthetic_data(config=data_gen_params, n_rows=104)
     synthetic_data.to_excel("autommm/data/synthetic_data.xlsx", index=False)
     print("Synthetic data saved to 'data/synthetic_data.xlsx'.")
 
