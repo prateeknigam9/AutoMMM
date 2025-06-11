@@ -12,3 +12,8 @@ langgraph-cli[inmem]
 langchain_community
 langchain_openai
 langchain-experimental
+
+#SyntheticDataGeneration
+seaborn
+pymc-marketing
+# conda install -c conda-forge gxx
