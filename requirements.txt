@@ -15,3 +15,4 @@ langchain-experimental
 
 # Excel automation
 pywin32
+XlsxWriter
