@@ -12,3 +12,6 @@ langgraph-cli[inmem]
 langchain_community
 langchain_openai
 langchain-experimental
+
+# Excel automation
+pywin32
