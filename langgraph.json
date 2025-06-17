@@ -1,8 +1,7 @@
 {
     "dependencies": ["./autommm"],
     "graphs": {
-      "agent": "./autommm/src/eda_agent/eda_bot.py:graph"
+      "agent": "./autommm/src/eda_agent/eda_workflow.py:workflow"
     },
     "env": ".env"
-
   }
