@@ -8,12 +8,15 @@ from . import config
 from dotenv import load_dotenv
 load_dotenv()
 
-os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
-os.environ['LANGSMITH_API_KEY'] = os.getenv("LANGSMITH_API_KEY")
-os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
+
 
 
 def process_config(config: dict):
+    
+    os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
+    os.environ['LANGSMITH_API_KEY'] = os.getenv("LANGSMITH_API_KEY")
+    os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
+
     master_data = pd.read_excel(config['master_data_path'],sheet_name=config['sheet_name'])
     llm = ChatGroq(
         model_name=config['model'], 

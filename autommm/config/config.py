@@ -9,7 +9,7 @@ configuration = {
     "python310_executable" : "C:/Users/nigam/anaconda3/envs/agenticAI/python.exe",
     "data_profile_path" : "outputs/data_profile.html",
     "eda_report_path" : "outputs/data_report.md",
-    "llm_infograph" : "llama-3.3-70b-versatile", #"mistral-saba-24b"
+    "llm_infograph" : "llama3-70b-8192", #"mistral-saba-24b" ideal mistral for coding
     "data_description" : {
             "date" : "Date column",
             "sku"	: "product identification number (stock keeping unit)",

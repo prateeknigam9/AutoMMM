@@ -25,7 +25,7 @@ def install_packages():
     try:
         import ydata_profiling
     except ImportError:
-        subprocess.check_call([python310_executable, "-m", "pip", "install", "ydata-profiling"])
+        subprocess.check_call([python310_executable, "-m", "pip", "install", "ydata-profiling","--quiet"])
 
 def main():
     install_packages()
