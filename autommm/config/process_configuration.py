@@ -1,5 +1,6 @@
 import pandas as pd
 from langchain_groq import ChatGroq
+
 import os
 from . import config
 
@@ -18,6 +19,10 @@ def process_config(config: dict):
         model_name=config['model'], 
         temperature=0.1
     )
+    llm_infograph = ChatGroq(
+        model_name=config['llm_infograph'], 
+        temperature=0.1
+    )
 
     return {
         'master_data' : master_data,
@@ -27,5 +32,6 @@ def process_config(config: dict):
         'master_data_path' : config['master_data_path'],
         'sheet_name' : config['sheet_name'],
         'data_profile_path' : config['data_profile_path'],
-        'eda_report_path' : config['eda_report_path']
+        'eda_report_path' : config['eda_report_path'],
+        'llm_infograph': llm_infograph
     }
