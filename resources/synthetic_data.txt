@@ -1,0 +1,12 @@
+1. Synthetic Dataset Generator  - https://github.com/ZacheryKuykendall/Synthetic-Data-Generator
+2. MMM Example Notebook - https://www.pymc-marketing.io/en/stable/notebooks/mmm/mmm_example.html
+3. pymcQA - https://discourse.pymc.io/t/is-there-a-way-to-generate-synthetic-data/9913
+4. Synthetic Data Generation Using Large Language Models: Advances in Text and Code - https://arxiv.org/abs/2503.14023
+5. library - https://pypi.org/project/ydata-synthetic/
+           - https://github.com/meta-llama/synthetic-data-kit
+6. Synthetic Data Gen - https://www.datacamp.com/tutorial/synthetic-data-generation
+7. Synthetic Data Gen - https://www.geeksforgeeks.org/synthetic-data-generation/
+8. Open AI synthetic Data - https://cookbook.openai.com/examples/sdg1
+9. top 5 packages - https://ydata.ai/resources/top-5-packages-python-synthetic-data
+10. 
+
