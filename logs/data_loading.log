@@ -1,0 +1,24 @@
+[2025-06-24 14:46:19,350] Loading Excel file from: C:\Users\nigam\Documents\AutoMMM\synthetic_data.xlsx
+[2025-06-24 14:46:19,581] Found sheets: ['Sheet2', 'Sheet1']
+[2025-06-24 14:46:27,249] Reading sheet: Sheet1
+[2025-06-24 14:46:42,885] Sending data to LLM for summarization...
+[2025-06-24 14:49:36,677] HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+[2025-06-24 14:49:36,681] LLM response received and printed below.
+[2025-06-24 14:49:36,682] Column description saved to memory/column_desc.txt
+[2025-06-24 14:50:33,507] User confirmed continuation after editing.
+[2025-06-24 14:58:30,495] Loading Excel file from: C:\Users\nigam\Documents\AutoMMM\synthetic_data.xlsx
+[2025-06-24 14:58:30,738] Found sheets: ['Sheet2', 'Sheet1']
+[2025-06-24 14:58:37,787] Reading sheet: Sheet1
+[2025-06-24 14:58:50,647] Sending data to LLM for summarization...
+[2025-06-24 15:01:41,669] HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+[2025-06-24 15:01:41,670] LLM response received and printed below.
+[2025-06-24 15:01:41,671] Column description saved to memory/column_desc.txt
+[2025-06-24 15:04:01,663] User confirmed continuation after editing.
+[2025-06-24 15:22:07,853] Loading Excel file from: C:\Users\nigam\Documents\AutoMMM\synthetic_data.xlsx
+[2025-06-24 15:22:08,093] Found sheets: ['Sheet2', 'Sheet1']
+[2025-06-24 15:22:10,117] Reading sheet: Sheet1
+[2025-06-24 15:22:13,330] Sending data to LLM for summarization...
+[2025-06-24 15:22:13,332] LLM response received and printed below.
+[2025-06-24 15:22:13,333] Column description saved to memory/column_desc.txt
+[2025-06-24 15:22:17,977] User confirmed continuation after editing.
+[2025-06-24 15:32:09,763] Invalid file path entered.

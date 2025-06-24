@@ -22,3 +22,5 @@ pywin32
 XlsxWriter
 
 ollama
+tabulate
+prompt_toolkit
