@@ -35,3 +35,34 @@ AutoMMM/
 ├── setup.py # Package configuration
 └── requirements.txt # Project dependencies
 ```
+
+agents
+    src
+        data_analysis_agent.py
+        manager_agent.py
+        model_preparation_agent.py
+        model_runner_agent.py
+        quality_debate_agent.py
+        __init__.py
+    prompts
+        data_analysis_agent.yaml
+        manager_agent.yaml
+        model_preparation_agent.yaml
+        model_runner_agent.yaml
+        quality_debate_agent.yaml
+    __init__.py
+    utilites
+        utiltiy.py
+        tools.py
+memory
+    memory.txt
+results
+    model_results.txt
+config
+    config.yaml
+    process_config.py
+.env
+.gitignore
+requirements.txt
+agent_base.py
+main.py
