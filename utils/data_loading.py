@@ -32,7 +32,8 @@ def data_loading(processed_config, llm_client):
     logging.info("Sending data to LLM for summarization...")
     print(system_message("\n💬 Summarizing your input using Ollama..."))
 
-    column_desc = llm_client.chat(
+    # column_desc = llm_client.chat(
+    column_desc = llm_client.chat.completions.create(
         model=processed_config["model"],
         messages=[{
             "role": "user",
@@ -57,7 +58,8 @@ def data_loading(processed_config, llm_client):
         }],
     )
 
-    column_desc = column_desc["message"]["content"]
+    # column_desc = column_desc["message"]["content"]
+    column_desc = column_desc.choices[0].message.content
     # column_desc = ""
     logging.info("LLM response received and printed below.")
     print(system_message("\n📌 Column Description:"))
@@ -65,7 +67,7 @@ def data_loading(processed_config, llm_client):
 
     os.makedirs("memory", exist_ok=True)
     with open("memory/column_desc.txt", "w", encoding="utf-8") as f:
-        f.write("column description:\n" + str(column_desc))
+        f.write("column description:\n" + str(column_desc).strip())
 
     logging.info("Column description saved to memory/column_desc.txt")
     print(system_message("\n💾 Summary saved to memory"))
