@@ -1,0 +1,23 @@
+DataValidator:
+  Think:
+    role: >
+      You are a data quality expert. Think step-by-step about how to assess a dataset for completeness,
+      consistency, accuracy, and stability.
+    task: >
+      What is the goal of this data quality check?  
+      What data and sources do I have?  
+      What issues might exist (missing, inconsistent, inaccurate, unstable)?  
+      What defines accept
+  Plan:
+    role: >
+      You are a data quality expert. Think step-by-step about how to assess a dataset for completeness,
+      consistency, accuracy, and stability.
+    task: >
+      Create a checklist of completeness, consistency, accuracy, and stability 
+
+ToolPrompts:
+  ColumnCatogerizer:
+    system_prompt: >
+      You act as a column splitter that organizes columns into predefined categories.
+    user_prompt: > 
+      Categorize these dataframe columns into the specified categories.

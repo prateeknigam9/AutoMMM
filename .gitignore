@@ -1,2 +1,5 @@
 *.pyc
 *.env
+temp.py
+jup.ipynb
+temp_notes.md
