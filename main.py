@@ -14,9 +14,6 @@ from config import processed_config
 from utils.data_loading import data_loading
 from utils.data_summary import run_data_summary
 
-
-
-
 def setup_logging():
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
