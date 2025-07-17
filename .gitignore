@@ -1,5 +1,2 @@
-.langgraph_api/*
 *.pyc
 .env
-outputs/*
-autommm/notebooks/experiments.ipynb
