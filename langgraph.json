@@ -1,0 +1,7 @@
+{
+    "dependencies": ["agent_patterns"],
+    "graphs": {
+      "agent": "agent_patterns/tool_calling_agent/tool_agent.py:workflow"
+    },
+    "env": ".env"
+  }
