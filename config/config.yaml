@@ -1,7 +1,0 @@
-model: "gpt-3.5-turbo" 
-# dolphin3
-python310_executable: "C:/Users/nigam/anaconda3/envs/agenticAI/python.exe"
-data_profile_path: "outputs/data_profile.html"
-eda_report_path: "outputs/data_report.md"
-llm_infograph: "llama-3.3-70b-versatile"
-
