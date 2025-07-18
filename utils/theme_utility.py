@@ -1,5 +1,5 @@
 
-
+import asyncio
 from rich.panel import Panel
 from rich.text import Text
 from rich.style import Style
@@ -86,9 +86,10 @@ def display_task_list(tasks):
     table.add_column("Task", style="medium_orchid3")
     table.add_column("Tool", style="bright_cyan", no_wrap=True)
     table.add_column("Reason", style="bright_black")
-    table.add_column("Args", style="yellow")
+    table.add_column("sequence", style="yellow")
+    table.add_column("dependency", style="grey82")
     for task in tasks:
-        table.add_row(task.task, task.suggested_tool, task.reason, str(task.tool_args))
+        table.add_row(task.task, task.suggested_tool, task.reason, str(task.sequence_id), str(task.dependency))
     console.print(Panel(table,title = "[magenta]TASKS TO PERFORM[/]"))
 
 def display_response(response: str, title:str="RESPONSE"):
@@ -117,3 +118,22 @@ def print_rich_table(rows, headers):
     for row in rows:
         table.add_row(*[str(cell) for cell in row])
     console.print(table)
+
+
+_spinner_lock = asyncio.Lock()
+
+class SingleSpinner:
+    def __init__(self, status_text: str, spinner: str = "dots"):
+        self.status_text = status_text
+        self.spinner = spinner
+        self._status = None
+
+    async def __aenter__(self):
+        await _spinner_lock.acquire()
+        self._status = console.status(self.status_text, spinner=self.spinner)
+        self._status.__enter__()  # enter the rich context manager
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self._status.__exit__(exc_type, exc_val, exc_tb)
+        _spinner_lock.release()

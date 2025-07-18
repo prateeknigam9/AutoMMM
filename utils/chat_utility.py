@@ -32,7 +32,22 @@ def llm_run(llm_client, messages:list, model:str="llama3.1"):
         )
         return response.message.content
 
-def ask_user_approval(agent_name, prompt_suffix="Do you approve? (yes / no / suggest changes): "):
+def take_user_feedback(task, prompt_suffix = "Do you approve? (yes / suggest changes): "):
+    text = f"[grey39][misty_rose3]{task}[/] awaits your approval[/]"
+    console.rule(text, style="grey39")
+
+    while True:
+        response = Prompt.ask(f"[grey39]{prompt_suffix}[/]", default="Y").strip()
+        if response.lower() in ("yes", "y"):
+            console.print(f"[dark_sea_green2]User approved {task} to proceed.[/]")
+            return True, None
+        elif response:
+            console.print(f"[tan]User suggested changes: {response}.[/]")
+            return '', response
+
+
+
+def ask_user_approval(agent_name, prompt_suffix="Do you approve? (yes / suggest changes): "):
     text = f"[grey39][misty_rose3]{agent_name}[/] awaits your approval[/]"
     console.rule(text, style="grey39")
 
