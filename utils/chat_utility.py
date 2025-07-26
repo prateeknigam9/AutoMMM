@@ -4,7 +4,11 @@ from langchain_ollama import ChatOllama
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from utils.theme_utility import console
+from langchain.output_parsers import OutputFixingParser
+from langchain.output_parsers import PydanticOutputParser
 import pandas as pd
+import re
+import json
 
 def build_message_structure(role: str, message :str):
     return {
@@ -82,8 +86,22 @@ def tool_approval_msg(tool, task, reason, args):
     }}
 """
 
+def tool_running_response(tool, args, result):
+    console.rule("[grey50]Tool Call", style="grey50")
+    console.print(f"[grey35]> Tool:[/] [pale_turquoise1]{tool}[/]")
+    console.print(f"[grey35]> Arguments:[/] [light_yellow3]{args}[/]")
+    console.print(f"[grey35]> Result:[/] [grey84]{str(result)[:50]}...[/]")
+
 def take_user_input(prompt: str) -> str:
-    return Prompt.ask(f"[yellow]{prompt}[/]").strip()
+    return Prompt.ask(f"[yellow]{prompt}[/]", default="Y").strip()
+
+def parse_user_command(user_input: str, pattern:str):
+    match = re.match(pattern, user_input.strip(), re.IGNORECASE)
+    if match:
+        command = match.group(1).lower()
+        suggestion = match.group(2) or ""
+        return command, suggestion.strip()
+    return None, None
 
 def chat_with_bot(history:list,llm, task_tool_dict: str = {}):
     class BotReplies(BaseModel):
@@ -201,3 +219,26 @@ def user_input_excel(df_to_edit:pd.DataFrame,file_path:str):
     updated_df.to_excel(file_path, index=False)
 
 
+
+def parse_json_pydantic(content, pydantic_object, llm):
+    match = re.search(r"\{[\s\S]*\}", content)
+    if match:
+        json_part = match.group()
+        parser = OutputFixingParser.from_llm(
+                        parser=PydanticOutputParser(pydantic_object=pydantic_object),
+                        llm=llm
+                    )
+        structured = parser.parse(json_part)
+        return structured
+    else:
+        return None
+
+def parse_json_from_response(text: str) -> dict | None:
+    match = re.search(r'\{.*?\}', text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
+    return None
+    

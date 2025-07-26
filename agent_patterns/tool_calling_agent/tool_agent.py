@@ -36,6 +36,10 @@ class argGenResposne(BaseModel):
     tool: str
     tool_args: dict
 
+class queryRephraseResponse(BaseModel):
+    RephrasedQuery : str
+    SuggestedTools : List[str]
+
 class ToolAgent:
     def __init__(self, agent_name:str, agent_goal:str, agent_description:str, tools:list, model:str, log_path:str = "tool_agent.log", async_mode = False):
         self.agent_name = agent_name
@@ -52,14 +56,38 @@ class ToolAgent:
 
         self.graph = self.build_graph()
 
+    def queryRephraserNode(self, state: ToolAgentState):
+        log("[sky_blue2]LOG: Entered queryRephraserNode[/]")
+        with console.status(f"[sky_blue2] queryRephraserNode working...[/]", spinner="dots"):
+            original_query = state["query"]
+            
+            tool_info = "\n".join(
+                [f"- {name}: {tool.description or 'No description provided.'}" 
+                for name, tool in self.tools_by_name.items()])
+
+            prompt = ToolPrompts['QueryRephraserPrompt'].format(
+                original_query = original_query,
+                tool_info = tool_info
+            )
+
+        response = self.llm.with_structured_output(queryRephraseResponse).invoke(prompt.strip())
+        response_str = f"# Rephrased Query : \n{response.RephrasedQuery}\n\n# SuggestedTools: \n{response.SuggestedTools}"
+        theme_utility.display_response(response_str)
+        return Command(
+            goto="queryBreakerNode",
+            update={
+                "RephrasedQuery": response_str
+            }
+        )
+
     # step 1 - break the query into task - tool pair
     def queryBreakerNode(self, state: ToolAgentState):
         log("[medium_purple3]LOG: Entered queryBreakerNode[/]")
         with console.status(f"[plum1] queryBreakerNode setting up...[/]\n", spinner="dots"):  
             prompt = ToolPrompts["queryBreakerPrompt"].format(
                 role = self.agent_name,
-                query=state["query"],
-                tool_list=utility.tools_to_action_prompt(self.tools),
+                query = state['RephrasedQuery'],
+                tool_list = utility.tools_to_action_prompt(self.tools),
             )
             if len(state["user_suggestions"]) > 0:
                 prompt += "SUGGESTION: " + ", ".join(state["user_suggestions"])
@@ -84,6 +112,13 @@ class ToolAgent:
                 goto="queryBreakerNode",
                 update={"user_suggestions": suggestion})
 
+    def drop_task_by_name(self, task_list, task_name):
+        for task in task_list:
+            if task == task_name:
+                task_list.remove(task)
+                log(f"[medium_purple3]task : {task} COMPLETED [/]\n")
+                break 
+
     # step 2 - tool runner and storing results
     def taskRunnerNode(self, state: ToolAgentState):
         log("[medium_purple3]LOG: Entered taskRunnerNode[/]")
@@ -92,97 +127,106 @@ class ToolAgent:
             task_results = {}
             sorted_tasks = sorted(state["task_tool_pairs"], key=lambda x: x.sequence_id)
 
-        for task_tool in sorted_tasks:
-            dependent_outputs = (
-                {dep_id: task_results[dep_id] for dep_id in task_tool.dependency}
-                if task_tool.dependency else {}
-            )
-            arg_prompt = ToolPrompts['argGeneratorPrompt'].format(
-                tool = task_tool.suggested_tool,
-                task = task_tool.task,
-                prev_result = dependent_outputs,
-                tool_desc = utility.tools_to_action_prompt([self.tools_by_name[task_tool.suggested_tool]])
-            )
-            tool_args_str = self.llm.with_structured_output(argGenResposne).invoke(arg_prompt)
-            # tool_args = ast.literal_eval(tool_args_str.tool_args)
-            print(type(tool_args_str.tool_args))
-            tool_args = tool_args_str.tool_args
-            log(f"[medium_purple3]LOG: Running tool for task={task_tool.task}[/]")
-            approved, suggestion = chat_utility.ask_user_approval(
-                agent_name="taskRunnerNode",
-                prompt_suffix=chat_utility.tool_approval_msg(
-                    tool=task_tool.suggested_tool,
-                    task=task_tool.task,
-                    reason=task_tool.reason,
-                    args=tool_args,
-                ),
-            )
-            if approved is True:
-                result = self.tools_by_name[task_tool.suggested_tool].invoke(
-                    tool_args
+        task_completed = [task_.task for task_ in sorted_tasks]
+        while len(task_completed) > 0:
+            for task_tool in sorted_tasks:
+                if task_tool.task not in task_completed:
+                    continue
+
+                dependent_outputs = (
+                    {dep_id: task_results[dep_id] for dep_id in task_tool.dependency}
+                    if task_tool.dependency else {}
                 )
-                tool_inputs = dict(task_tool)
-                tool_result = {
-                        "task": task_tool.task,
-                        "tool": task_tool.suggested_tool,
-                        "args": tool_args,
-                        "result": result,
-                    }
-                tool_resp_dict.append(tool_result)
-                task_results[task_tool.sequence_id] = result
-                chat_utility.append_to_structure(history = state['message'], role = "assistant", message = json.dumps(tool_inputs))
-                chat_utility.append_to_structure(history = state['message'], role = "tool", message = result)
-            else:
-                log(f"[medium_purple3]LOG: User provided modification suggestion: {suggestion}[/]")
-                while True:
-                    try:
-                        parsed = ast.literal_eval(suggestion)
-                        if isinstance(parsed, dict):
-                            result = self.tools_by_name[parsed["tool_name"]].invoke(
-                                parsed["tool_args"]
+                arg_prompt = ToolPrompts['argGeneratorPrompt'].format(
+                    tool = task_tool.suggested_tool,
+                    task = task_tool.task,
+                    prev_result = dependent_outputs,
+                    tool_desc = utility.tools_to_action_prompt([self.tools_by_name[task_tool.suggested_tool]])
+                )
+                tool_args_str = self.llm.with_structured_output(argGenResposne).invoke(arg_prompt)
+                tool_args = tool_args_str.tool_args
+
+                log(f"[medium_purple3]LOG: Running tool for task={task_tool.task}[/]")
+
+                approved, suggestion = chat_utility.ask_user_approval(
+                    agent_name="taskRunnerNode",
+                    prompt_suffix=chat_utility.tool_approval_msg(
+                        tool=task_tool.suggested_tool,
+                        task=task_tool.task,
+                        reason=task_tool.reason,
+                        args=tool_args,
+                    ),
+                )
+
+                if approved is True:
+                    result = self.tools_by_name[task_tool.suggested_tool].invoke(tool_args)
+                    tool_inputs = dict(task_tool)
+                    tool_result = {
+                            "task": task_tool.task,
+                            "tool": task_tool.suggested_tool,
+                            "args": tool_args,
+                            "result": result,
+                        }
+
+                    tool_resp_dict.append(tool_result)
+                    task_results[task_tool.sequence_id] = result
+                    self.drop_task_by_name(task_completed, task_tool.task)
+
+                    chat_utility.append_to_structure(history = state['message'], role = "assistant", message = json.dumps(tool_inputs))
+                    chat_utility.append_to_structure(history = state['message'], role = "tool", message = result)
+                    break
+                else:
+                    log(f"[medium_purple3]LOG: User provided modification suggestion: {suggestion}[/]")
+                    while True:
+                        try:
+                            parsed = ast.literal_eval(suggestion)
+                            if isinstance(parsed, dict):
+                                result = self.tools_by_name[parsed["tool_name"]].invoke(
+                                    parsed["tool_args"]
+                                )
+                                tool_input = {
+                                        "task": task_tool.task,
+                                        "tool": parsed["tool_name"],
+                                        "args": parsed["tool_args"]
+                                    }
+                                tool_result = {
+                                        "task": task_tool.task,
+                                        "tool": parsed["tool_name"],
+                                        "args": parsed["tool_args"],
+                                        "result": result,
+                                    }
+                                tool_resp_dict.append(tool_result)
+                                task_results[task_tool.sequence_id] = result
+                                self.drop_task_by_name(task_completed, task_tool.task)
+                                chat_utility.append_to_structure(history = state['message'], role = "assistant", message = json.dumps(tool_inputs))
+                                chat_utility.append_to_structure(history = state['message'], role = "tool", message = result)
+                                break
+                        except:
+                            log("[medium_purple3]LOG: Failed to parse user suggestion[/]")
+                            _, suggestion = chat_utility.ask_user_approval(
+                                agent_name="Category Approval Node",
+                                prompt_suffix="Invalid input. Please respond with a dictionary like:\n"
+                                "{'tool_name': 'tool_x', 'tool_args': {...}}\n"
+                                "Or type 'skip' to deny this tool.",
                             )
-                            tool_input = {
-                                    "task": task_tool.task,
-                                    "tool": parsed["tool_name"],
-                                    "args": parsed["tool_args"]
-                                }
-                            tool_result = {
-                                    "task": task_tool.task,
-                                    "tool": parsed["tool_name"],
-                                    "args": parsed["tool_args"],
-                                    "result": result,
-                                }
-                            tool_resp_dict.append(tool_result)
-                            task_results[task_tool.sequence_id] = result
-                            chat_utility.append_to_structure(history = state['message'], role = "assistant", message = json.dumps(tool_inputs))
-                            chat_utility.append_to_structure(history = state['message'], role = "tool", message = result)
-                            break
-                    except:
-                        log("[medium_purple3]LOG: Failed to parse user suggestion[/]")
-                        _, suggestion = chat_utility.ask_user_approval(
-                            agent_name="Category Approval Node",
-                            prompt_suffix="Invalid input. Please respond with a dictionary like:\n"
-                            "{'tool_name': 'tool_x', 'tool_args': {...}}\n"
-                            "Or type 'skip' to deny this tool.",
-                        )
-                        if suggestion == "skip":
-                            log("[medium_purple3]LOG: User skipped the tool[/]")
-                            tool_input = {
-                                    "task": task_tool.task,
-                                    "tool": None,
-                                    "args": None,
-                                }
-                            tool_result = {
-                                    "task": task_tool.task,
-                                    "tool": None,
-                                    "args": None,
-                                    "result": "denied",
-                                }
-                            tool_resp_dict.append(tool_result)
-                            chat_utility.append_to_structure(history = state['message'], role = "assistant", message = json.dumps(tool_inputs))
-                            chat_utility.append_to_structure(history = state['message'], role = "tool", message = "denied")
-                            break
-            task_results[task_tool.sequence_id] = result
+                            if suggestion == "skip":
+                                log("[medium_purple3]LOG: User skipped the tool[/]")
+                                tool_input = {
+                                        "task": task_tool.task,
+                                        "tool": None,
+                                        "args": None,
+                                    }
+                                tool_result = {
+                                        "task": task_tool.task,
+                                        "tool": None,
+                                        "args": None,
+                                        "result": "denied",
+                                    }
+                                tool_resp_dict.append(tool_result)
+                                chat_utility.append_to_structure(history = state['message'], role = "assistant", message = json.dumps(tool_inputs))
+                                chat_utility.append_to_structure(history = state['message'], role = "tool", message = "denied")
+                                break
+                task_results[task_tool.sequence_id] = result
         with console.status(f"[plum1] Generating response...[/]\n", spinner="dots"):
             prompt = ToolPrompts['ToolNodePrompt']
             prompt += f"\n QUERY - {state['query']}"
@@ -261,11 +305,12 @@ class ToolAgent:
     def build_graph(self):
         workflow = StateGraph(ToolAgentState)
 
+        workflow.add_node("queryRephraserNode", self.queryRephraserNode)
         workflow.add_node("queryBreakerNode", self.queryBreakerNode)
         workflow.add_node("taskRunnerNode", self.taskRunnerNode)
         workflow.add_node("responseNode", self.responseNode)
 
-        workflow.add_edge(START, "queryBreakerNode")
+        workflow.add_edge(START, "queryRephraserNode")
         # workflow.add_edge("queryBreakerNode", "taskRunnerNode")
         # workflow.add_edge("taskRunnerNode", "responseNode")
         # workflow.add_edge("responseNode", END)

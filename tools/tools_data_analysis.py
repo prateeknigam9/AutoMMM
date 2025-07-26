@@ -14,6 +14,45 @@ from agent_patterns.structured_response import ColumnCategories
 from utils.memory_handler import DataStore
 
 
+@tool
+def add_two_numbers(a:int, b:int):
+    """the tool is to add two numbers
+    Args:
+        a (int): first number
+        b (int): second number
+
+    Returns:
+        (int): number
+    """
+    return a + b
+@tool
+def multiply_two_numbers(a:int, b:int):
+    """the tool is to multiply two numbers
+    Args:
+        a (int): first number
+        b (int): second number
+
+    Returns:
+        (int): number
+    """
+    return a * b
+    
+@tool
+def age_fn(query_name: str):
+    """the tool is to extract age of person
+    Args:
+        query_name (str): name of person
+
+    Returns:
+        (int): age of person
+    """
+    ages = {"raj": 10,
+            "pranay": 20,
+            "krishna" :30
+    }
+    return ages[query_name.lower()]
+
+
 class sum_tool(BaseTool):
     name: str = "addition"
     description: str = """
@@ -23,6 +62,7 @@ class sum_tool(BaseTool):
 
     def _run(self, a: int, b: int):
         return a + b
+
 # Misc
 @tool
 def execute_python_code_on_df(code: str, df_required: bool):
@@ -30,15 +70,14 @@ def execute_python_code_on_df(code: str, df_required: bool):
     Executes Python code and returns add prints to return the output.
     If the query is related to data, provide 'df' in the execution environment,
     else run code normally without 'df'.
-    """
-    df = DataStore.get_df("master_data")
+    """    
     try:
         io_buffer = StringIO()
 
         env = {}
         if df_required:
+            df = DataStore.get_df("master_data")
             env["df"] = df
-
         with redirect_stdout(io_buffer):
             exec(code, env)
         return io_buffer.getvalue()

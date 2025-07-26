@@ -12,6 +12,7 @@ from rich.prompt import Prompt
 from rich.markdown import Markdown
 from rich import box
 import os
+import json
 import shutil
 terminal_width = shutil.get_terminal_size().columns
 console_width = int(terminal_width * 0.75)
