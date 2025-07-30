@@ -4,9 +4,10 @@ from langgraph.graph import StateGraph
 from agent_patterns.states import DataTeamManagerState
 from utils import chat_utility
 from utils import theme_utility
+from utils.memory_handler import DataStore
 
 from langchain_ollama import ChatOllama
-
+from pathlib import Path
 from langgraph.graph import StateGraph, START, END
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
@@ -29,9 +30,19 @@ from utils import utility
 
 ManagerPrompt = utility.load_prompt_config(
     r"prompts\AgentPrompts.yaml",
-    "supervisor_router",
+    "data_team_manager_prompts",
 )
 
+user_messages = utility.load_prompt_config(
+    r"prompts\user_messages.yaml",
+    "data_team_manager",
+)
+
+
+# TODO : 
+# /chat with Memory + Tool calls - /CHAT 
+# /run Individuals - /RUN <Agent_name>
+# /auto sequential run - /START
 
 class DataTeamManagerAgent:
     def __init__(self, agent_name :str, agent_description:str, backstory:str = ""):
@@ -42,29 +53,28 @@ class DataTeamManagerAgent:
         self.llm = ChatOllama(model = "llama3.1")
         # self.llm = ChatOpenAI(model = "gpt-4o-mini")
         self.data_engineer = DataEngineerAgent(
-            agent_name="Data Engineer",
+            agent_name="Data Engineer Agent",
             agent_description="Responsible for loading, and contextualizing raw MMM input data using Excel files and a UI-based interaction, and preparing it for downstream modeling.",
             model="llama3.1")
         self.data_analyst = DataAnalystAgent(
-            agent_name="Data Analyst",
+            agent_name="Data Analyst Agent",
             agent_description="Performs data profiling, summarization, and column categorization to ensure structured, ready-to-model datasets.",
             model="llama3.1")
         self.qa_analyst = DataQualityAnalystAgent(
             agent_name="Data Quality Specialist Agent",
             agent_description="Validates brand-level and product-level data for modeling readiness by running automated checks, summarizing tool outputs, and generating a structured validation report.",
             model="llama3.1")
+        
+        agent_commands = [
+        ("/CHAT", "Enter chat mode (memory + tool calls enabled)"),
+        ("/EXIT", "Exit chat mode and return to command interface"),
+        ("/RUN <Agent_name>", "Run an individual agent manually"),
+        ("/START <input>", "Run agents automatically in sequence using the input"),
+    ]
+        theme_utility.show_instructions(agent_commands)
       
     def chatNode(self, state:DataTeamManagerState):
-        prompt = ("you are {agent_name}, {agent_description}, reply to the user in a conversational manner, Backstory : {backstory},"
-                  """ Current Status of agents already called:
-                        data_engineer_agent: {data_engineer_status}
-                        data_analysis_agent: {data_analyst_status}
-                        quality_assurance_agent : {qa_analyst_status}
-                        """
-                  """ if the user intent requires calling agent, only then Reply in json format
-                            - `call_agent` (str) : (if any) the next agent to handle the task Literal["data_engineer_agent", "data_analysis_agent","quality_assurance_agent","__end__"]
-                            - `task` (str) : a brief task description for the agent
-                  """).format(
+        prompt = ManagerPrompt['manager_chat_prompt'].format(
             agent_name = self.agent_name,
             agent_description = self.agent_description,
             backstory = self.backstory,
@@ -72,6 +82,7 @@ class DataTeamManagerAgent:
             data_analyst_status = state['analysis_done'],
             qa_analyst_status = state['quality_assurance']
         )
+
         take_input_prompt = f"Hi, I am {self.agent_name}, How can i help you?"
 
         while True:            
@@ -80,10 +91,27 @@ class DataTeamManagerAgent:
                     state["task"] = None
             else:
                 user_input = chat_utility.take_user_input(take_input_prompt)
-            take_input_prompt = "USER:"
+            take_input_prompt = "USER"
             if user_input == "exit":
                 break
+            elif "/" in user_input:
+                command, input_text = chat_utility.parse_user_command(user_input)
+                if command == "start":
+                    theme_utility.display_response(user_messages['auto_start_mode'], title = self.agent_name)
+                    return Command(
+                            goto = "data_engineer_agent",
+                            update = {
+                                "next_agent": "data_engineer_agent",
+                                "task": "load the data",
+                                "command" : 'start'
+                                }
+                        )
 
+                if command == "run":
+                    ... # TODO
+                if command == "chat":
+                    ... # TODO
+        
             messages = [
                 chat_utility.build_message_structure(role = "system", message = prompt),
                 chat_utility.build_message_structure(role = "user", message = user_input),
@@ -143,6 +171,7 @@ class DataTeamManagerAgent:
             agent_description=self.data_engineer.agent_description,
             is_interactive=False,
         )
+
         inputs = {
             "messages": [
                 chat_utility.build_message_structure(role="user", message=state['task'])
@@ -150,7 +179,17 @@ class DataTeamManagerAgent:
         }
         de_response = self.data_engineer.graph.invoke(inputs)
         if de_response['completed']:
-            state['data_loaded'] == True
+            state['data_loaded'] = True
+        
+        if state['command'] == "start" and state['data_loaded'] == True:
+            return Command(
+                goto = "data_analysis_agent",
+                update = {
+                    "next_agent": "data_analysis_agent",
+                    "task": "analyse the data",
+                    "command" : 'start'
+                    }
+            )
         messages_from_data_engineer = de_response['messages']
         sysprompt = f"You are {self.data_engineer.agent_name},{self.data_engineer.agent_description} , working for a {self.agent_name}, based on you history of messages given by user, reply back to him on completion or status of your allotted task."
         messages = [
@@ -191,12 +230,22 @@ class DataTeamManagerAgent:
         }
         da_response = self.data_analyst.graph.invoke(inputs)
         if da_response['completed']:
-            state['analysis_done'] == True
+            state['analysis_done'] = True
             state['data_analysis_report'] = {
                 'data_summary': da_response['data_summary'],
                 'column_categories': da_response['column_categories'],
                 'distinct_products': da_response['distinct_products'] 
-                }           
+                } 
+
+        if state['command'] == "start" and state['analysis_done'] == True:
+            return Command(
+                goto = "quality_assurance_agent",
+                update = {
+                    "next_agent": "quality_assurance_agent",
+                    "task": "analyse the quality of the data",
+                    "command" : 'start'
+                    }
+            )          
         messages_from_data_analyst = da_response['messages']
         sysprompt = f"You are {self.data_analyst.agent_name},{self.data_analyst.agent_description} working for a {self.agent_name}, based on you history of messages and data_report given by user, reply back to him on the status of your allotted task with a short summary"
         messages = [
@@ -206,6 +255,7 @@ class DataTeamManagerAgent:
         ]
         response = self.llm.invoke(messages)
         theme_utility.display_response(response.content, title = self.data_analyst.agent_name)
+        memory_context = self.generate_memory_context("memory/")
         approved, feedback = chat_utility.ask_user_approval(agent_name = self.data_analyst.agent_name, prompt_suffix="Use this input, or modify before sending to manager agent?") 
         if approved is True:
             return Command(
@@ -270,7 +320,44 @@ class DataTeamManagerAgent:
                     }
             )
 
-    
+    def generate_memory_context(self, memory_dir: str):
+        context = []
+        for file_path in Path(memory_dir).glob("*.txt"):
+            file_name = file_path.name.split('.')[0]
+            with open(file_path, "r", encoding="utf-8") as f:
+                try:
+                    content = json.load(f)
+                    content_text = json.dumps(content, indent=2)
+                except json.JSONDecodeError:
+                    f.seek(0)  
+                    content_text = f.read()
+                context.append(f"### {file_name}\n{content_text.strip()}")
+
+        memory_context = "\n\n".join(context)
+        system_prompt = (
+            "You are a detail-oriented AI assistant specialized in data science workflows. "
+            "You have been provided with internal memory files from a market mix modeling dataset. "
+            "Your task is to transform the **entire raw content** into a **verbatim, fully faithful natural language description**, "
+            "with no summarization, abstraction, generalization, or formatting. "
+            "This description will later be split into chunks for embedding and retrieval, so the text must be purely **natural language prose** — "
+            "**no tables, no bullet points, and no structured formatting** such as JSON or markdown. "
+
+            "Retain all original numeric values (e.g., counts, percentages, prices, dates, years, column names, etc.) **exactly as they appear**, "
+            "but express them in complete sentences using clear, precise academic English. "
+            "Group the content logically into paragraphs based on themes like column categories, missing values, product summaries, and date coverage. "
+
+            "Your output should read like a thorough technical explanation or documentation — dense, well-written, and exhaustive — "
+            "but with **no information omitted, trimmed, reinterpreted, or simplified**. "
+            "The final result must allow downstream LLMs to correctly answer questions such as: "
+            "'How many rows are in the dataset?', 'What products are included?', or 'Which columns have missing values and how much?'. "
+        )
+        response = self.llm.invoke([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": (memory_context)}
+        ])
+        DataStore.set_str("memory_context", response.content.strip())
+        utility.save_to_memory_file("memory_context.txt", response.content.strip())
+        return response.content.strip()
 
     def build_graph(self, state:DataTeamManagerState):
         workflow = StateGraph(state)

@@ -1,0 +1,13 @@
+data_team_manager:
+  auto_start_mode: |
+    **Agent Started in Auto Mode**
+
+    I will now execute the following steps sequentially:
+
+    1. **Data Engineer** - Load the input data.
+    2. **Data Analyst** - Perform profiling, summarization, and column classification.
+    3. **Data Quality** - Validate brand-level and product-level data for modeling readiness.
+
+    Once complete, you may use **chat mode** to explore or query the analysis.
+
+    

@@ -9,14 +9,7 @@ Responsibilities:
 """
 from langgraph.graph import START, END, StateGraph
 from langchain_ollama import ChatOllama
-from datetime import datetime
-from itertools import zip_longest
-from agent_patterns.states import DataValidationState, Feedback
-from agent_patterns.structured_response import (
-    ColumnCategories,
-    ColumnCategoriesResponse,
-    TypeValidationResponse,
-)
+from agent_patterns.states import DataQualityAnalystState
 from agent_patterns.tool_calling_agent.tool_agent import ToolAgent
 from tools.tools_data_analysis import (
     generate_validation_summary,
@@ -43,17 +36,11 @@ from tools.tools_data_analysis import (
 )
 
 from utils import utility
-from utils.memory_handler import DataStore
+import ast
 from utils import theme_utility
 from utils import chat_utility
-import pandas as pd
-from pathlib import Path
-from typing import List
+from utils.memory_handler import DataStore
 from utils.theme_utility import console, log
-from rich import print, prompt
-from tabulate import tabulate
-import json
-import os
 
 DataValidationPrompt = utility.load_prompt_config(
     r"prompts\AgentPrompts.yaml",
@@ -78,7 +65,7 @@ class DataQualityAnalystAgent:
         theme_utility.setup_console_logging(log_path)
         self.graph = self._build_graph()
 
-    def toolRunnerDataLevelNode(self, state: DataValidationState):
+    def toolRunnerDataLevelNode(self, state: DataQualityAnalystState):
         log("[medium_purple3]LOG: Running tools to generate data validation report at[/] [turquoise4]Brand Level[/]")
         with console.status(
             f"[plum1] Data Loading Node setting up...[/]\n", spinner="dots"
@@ -117,7 +104,7 @@ class DataQualityAnalystAgent:
             "messages": [asst_message]
             }
 
-    def toolRunnerProductLevelNode(self, state: DataValidationState):
+    def toolRunnerProductLevelNode(self, state: DataQualityAnalystState):
         log("[medium_purple3]LOG: Running tools to generate data validation report at[/] [turquoise4]Product Level[/]")
         validation_tools = [
             validate_missing_dates,
@@ -134,8 +121,9 @@ class DataQualityAnalystAgent:
         ]
         all_results = []
         responses = {}
-
-        for product_id in state['distinct_products']:
+        distinct_products = DataStore.get_str('distinct_products')
+        distinct_products = ast.literal_eval(distinct_products)
+        for product_id in distinct_products:
             tool_outputs = {}
             for tool in validation_tools:
                 try:
@@ -160,7 +148,7 @@ class DataQualityAnalystAgent:
         log("[dark_green]LOG: Data validation report Generated at[/] [turquoise4]Product Level[/]")
         return state
 
-    def finalReportGeneratorNode(self, state: DataValidationState):
+    def finalReportGeneratorNode(self, state: DataQualityAnalystState):
         log("[medium_purple3]LOG: Starting final data validaiton report Generation[/]")
         with console.status("[plum1] Generating final markdown report using LLM...", spinner="dots"):
             all_summaries = []
@@ -200,15 +188,15 @@ class DataQualityAnalystAgent:
             log(f"[dark_green] Markdown report saved to[/] [turquoise4]{report_path}[/]")
             asst_message = chat_utility.build_message_structure(role = "assistant", message = f"Markdown report saved to {report_path}")
             return {
-                "final_report": markdown_report,
-                 "report_path": report_path,
-                 "messages": [asst_message],
-                 "completed":True
+                "qa_report": markdown_report,
+                "qa_report_path": report_path,
+                "messages": [asst_message],
+                "completed":True
                  }
 
 
     def _build_graph(self):
-        g = StateGraph(DataValidationState)
+        g = StateGraph(DataQualityAnalystState)
         g.add_node("toolRunnerDataLevelNode", self.toolRunnerDataLevelNode)
         g.add_node("toolRunnerProductLevelNode", self.toolRunnerProductLevelNode)
         g.add_node("finalReportGeneratorNode", self.finalReportGeneratorNode)

@@ -1,27 +1,25 @@
 """
-Data Analyst
-Role: Performs data profiling, summarization, and column categorization to ensure structured, ready-to-model datasets.
+Insight Analyst
+Role: Delivers a quick readout: What the data says before modeling begins
 Responsibilities:
     - Generate descriptive summaries of the dataset (shape, products, dates, missing values).
     - Collect and validate column configuration from the user.
     - Categorize columns using LLM-based classification and human-in-the-loop approval.
     - Identify distinct products and key dimensions for modeling readiness.
 """
-from langchain_core.callbacks import streaming_stdout
+
+
 from langgraph.graph import START, END, StateGraph
 from langchain_ollama import ChatOllama
-from itertools import zip_longest
-
-from langgraph.types import Command
-from agent_patterns.states import DataAnalystState, Feedback
-from agent_patterns.structured_response import ColumnCategoriesResponse
+from agent_patterns.states import DataInsightState
 from utils import utility
 from utils.memory_handler import DataStore
 from utils import theme_utility
 from utils import chat_utility
 import pandas as pd
-from rich import print
 from utils.theme_utility import console, log
+import json
+import os
 
 DataValidationPrompt = utility.load_prompt_config(
     r"prompts\AgentPrompts.yaml",
@@ -45,117 +43,38 @@ class DataAnalystAgent:
         self.log_path = log_path
         theme_utility.setup_console_logging(log_path)
         self.graph = self._build_graph()
-
-    def DataSummaryNode(self, state: DataAnalystState):
+    
+    def Data_overview(self, state: DataInsightState):    
         log("[medium_purple3]LOG: Starting Data Summarizer...[/]")
         with console.status(f"[plum1] Data Summarizer Node setting up...[/]", spinner="dots"):
-            col_config = [
-                "date_col",
-                "product_col",
-                "price_col",
-                "revenue_col",
-                "units_sold_col",
-                "oos_col",
-            ]
-        try:
-            actual_cols = list(DataStore.get_df("master_data").columns)
-            rows = list(zip_longest(col_config, actual_cols))
-            required_columns_df = pd.DataFrame(
-                rows, columns=["COLUMN_CONFIG", "COLUMN_NAME"]
-            )
-            file_path = r"user_inputs\column_config.xlsx"
-            chat_utility.user_input_excel(required_columns_df, file_path=file_path)
+            sysprompt = 
 
-            console.print(f"\n[light_sky_blue1]Columns detected: [/]")
-            theme_utility.print_items_as_panels(actual_cols)
+# Pending : Because context should come from memory and REPL tools if required
 
-            column_config_df = pd.read_excel(file_path)
-            DataStore.set_df("column_config_df", column_config_df)
-            column_config = dict(
-                zip(column_config_df["COLUMN_CONFIG"], column_config_df["COLUMN_NAME"])
-            )
+def data_overview(state: ReportState):
+    print("--- Node: Generating overall data overview... ---")
+    prompt_config = load_prompt_config(
+        prompts_config_path, "eda_analyst_agent"
+    )
 
-            date_col = column_config["date_col"]
-            product_col = column_config["product_col"]
-            price_col = column_config["price_col"]
+    user_prompt = prompt_config["template"].format(
+        sample_df=df, data_description=data_description
+    )
+    messages = [
+        {"role": "system", "content": f"goal: {prompt_config['goal']}"},
+        {"role": "system", "content": f"backstory: {prompt_config['backstory']}"},
+        {"role": "system", "content": f"instruction: {prompt_config['instruction']}"},
+        {"role": "user", "content": user_prompt},
+    ]
+    try:
+        overview = llm.invoke(messages)
+        print("Overall data overview generated.")
+        return {"overview": overview.content}
+    except Exception as e:
+        print(f"Error in DataOverview node: {e}")
+        return {"overview": f"Failed to generate data overview: {e}"}
+        
 
-            data_summary = self.full_dataframe_summary(
-                DataStore.get_df("master_data"), date_col, product_col, price_col
-            )
-
-            # --- BASIC INFO ---
-            console.print("\n[bold underline]Basic Info[/bold underline]")
-            basic_info = [
-                ("Shape", data_summary.get("Shape")),
-                ("Products", data_summary.get("Unique Products")),
-            ]
-            theme_utility.print_rich_table(basic_info, headers=["Metric", "Value"])
-
-            # --- DATE INFO ---
-            date_info = data_summary.get("Date Info", {})
-            if date_info:
-                console.print("\n[bold underline]Date Info[/bold underline]")
-                theme_utility.print_rich_table(
-                    list(date_info.items()), headers=["Metric", "Value"]
-                )
-
-            # --- MISSING VALUES ---
-            missing = data_summary.get("Missing Values", {})
-            if missing:
-                console.print("\n[bold underline]Missing Values[/bold underline]")
-                rows = [(k, v["Count"], f"{v['Percent']:.2f}%") for k, v in missing.items()]
-                theme_utility.print_rich_table(
-                    rows, headers=["Column", "Missing Count", "Missing %"]
-                )
-
-            # --- UNIQUE & MOST FREQUENT ---
-            unique_freq = data_summary.get("Unique and Most Frequent", {})
-            if unique_freq:
-                console.print("\n[bold underline]Unique and Most Frequent[/bold underline]")
-                rows = [
-                    (k, v["Unique Values"], v["Most Frequent"])
-                    for k, v in unique_freq.items()
-                ]
-                theme_utility.print_rich_table(
-                    rows, headers=["Column", "Unique Values", "Most Frequent"]
-                )
-
-            # --- PRODUCT SUMMARY ---
-            prod_summary = data_summary.get("Product Summary", {})
-            if prod_summary:
-                console.print("\n[bold underline]Product Summary[/bold underline]")
-                rows = [
-                    (k, v["Start Date"], v["End Date"], v["Data Points"], v["Avg Price"])
-                    for k, v in prod_summary.items()
-                ]
-                theme_utility.print_rich_table(
-                    rows,
-                    headers=[
-                        "Product",
-                        "Start Date",
-                        "End Date",
-                        "Data Points",
-                        "Avg Price",
-                    ],
-                )
-            utility.save_to_memory_file('data_summary.txt', str(data_summary))
-            log(f"[medium_purple3]LOG: Saved data summary to memory[/]")
-            log("[green3]LOG: Data generated report [/]")
-            asst_message = chat_utility.build_message_structure(role = "assistant", message = "Data Summarization process complete")
-            return Command(
-                goto = "colCategorizeNode",
-                update = {
-                    "data_summary": self._cast_to_builtin_types(data_summary),
-                    "messages": [asst_message]
-                    }
-            )
-        except Exception as e:
-            return Command(
-                goto = END, 
-                update = {
-                    "messages": [chat_utility.build_message_structure(role = "assistant", message = f"Error while summarizing data :{e}")]
-                }
-            )
 
     def ColumnCatogerizerNode(self, state: DataAnalystState):
         log("[medium_purple3]LOG: Starting Column Catogorizing[/]")
@@ -186,14 +105,14 @@ class DataAnalystAgent:
             except:
                 pass
             response = llm_structured.invoke(messages)
-            theme_utility.display_response(response.thought_process, title="Thought",border_style='light_steel_blue')
+            theme_utility.display_response(response.thought_process, title="Thought")
             theme_utility.display_response(
-                ", ".join(list(DataStore.get_df("master_data").columns)), title="ALL COLUMNS", border_style='light_yellow3'
+                ", ".join(list(DataStore.get_df("master_data").columns)), title="ALL COLUMNS"
             )
-        log("[green3]LOG: Column Catogories Generated[/]")
+        log("[dark_green]LOG: Column Catogories Generated[/]")
         asst_message = chat_utility.build_message_structure(role = "assistant", message = "Column Catogories Generated")
         return {
-            "column_categories": self._cast_to_builtin_types(dict(response.column_categories)),
+            "column_categories": dict(response.column_categories),
             "messages": [asst_message]
             }
 
@@ -232,7 +151,7 @@ class DataAnalystAgent:
     def _colCatDecisionNode(self, state: DataAnalystState):
         if state["user_feedback"].category == "approve":
             utility.save_in_memory(
-                "column_categories", to_save=state["column_categories"], desc = "Column categories"
+                "column_categories", to_save=state["column_categories"]
             )
             return "approved"
         elif state["user_feedback"].category == "retry":
@@ -242,18 +161,24 @@ class DataAnalystAgent:
 
     def distinctProductNode(self, state: DataAnalystState):
         log("[medium_purple3]LOG: Identifying Distinct Products[/]")
-        with console.status(f"[plum1] Distinct Product Identifier Node setting up...[/]", spinner="dots"):
-            distinct_products = DataStore.get_df("master_data")[state["column_categories"]["product_col"]].dropna().unique().tolist()
+        with console.status(
+            f"[plum1] Distinct Product Identifier Node setting up...[/]", spinner="dots"
+        ):
+            unique_products = (
+                DataStore.get_df("master_data")[state["column_categories"]["product_col"]]
+                .dropna()
+                .unique()
+                .tolist()
+            )
         console.print(f"\n[light_sky_blue1]Distinct Products:[/]")
-        theme_utility.print_items_as_panels(distinct_products)
-        log("[green3]LOG: Distinct Product Identification completed[/]")
+        theme_utility.print_items_as_panels(unique_products)
+        log("[dark_green]LOG: Distinct Product Identification completed[/]")
         asst_message = chat_utility.build_message_structure(role = "assistant", message = "Distinct Product Identification completed")
-        state['messages'].append(asst_message)
-        state['distinct_products'] = self._cast_to_builtin_types(distinct_products)
-        DataStore.set_str("distinct_products",str(distinct_products))
-        state['completed'] = True
-        state['user_feedback'] = None
-        return state
+        return {
+            "messages" : [asst_message],
+            "distinct_products": unique_products,
+            "completed":True
+            }
 
 
     def _build_graph(self):
@@ -330,26 +255,3 @@ class DataAnalystAgent:
         summary["Product Summary"] = product_summary
 
         return summary
-    
-    def _cast_to_builtin_types(self, obj):
-        import numpy as np
-        import pandas as pd
-
-        if isinstance(obj, dict):
-            return {str(k): self._cast_to_builtin_types(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [self._cast_to_builtin_types(i) for i in obj]
-        elif isinstance(obj, (np.integer, np.int64, np.int32)):
-            return int(obj)
-        elif isinstance(obj, (np.floating, np.float64, np.float32)):
-            return float(obj)
-        elif isinstance(obj, (np.bool_, bool)):
-            return bool(obj)
-        elif isinstance(obj, (np.datetime64, pd.Timestamp)):
-            return str(obj)
-        elif isinstance(obj, pd.DataFrame):
-            return obj.to_dict(orient="records")
-        elif isinstance(obj, pd.Series):
-            return obj.tolist()
-        else:
-            return obj

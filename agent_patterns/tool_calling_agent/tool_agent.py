@@ -329,7 +329,6 @@ class ToolAgent:
             "finalresponse" : "",
             "task_tool_pairs" : []
         }
-        theme_utility.print_startup_info(self.agent_name, self.agent_description, True)
         result = self.graph.invoke(inputs)
         log("[medium_purple3]LOG: Graph execution complete[/]")
         return result

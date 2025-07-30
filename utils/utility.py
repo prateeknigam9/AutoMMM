@@ -54,7 +54,7 @@ def save_in_memory(file_name, to_save, desc:str=''):
             json.dump(to_save, f, ensure_ascii=False, indent=4)
         else:
             f.write(str(to_save))
-    print(f"\n💾 {desc} saved to memory")
+    print(f"\n{desc} saved to memory")
 
 
 def save_to_memory_file(filename, content):

@@ -12,7 +12,7 @@ from rich.prompt import Prompt
 from rich.markdown import Markdown
 from rich import box
 import os
-import json
+from typing import List, Tuple
 import shutil
 terminal_width = shutil.get_terminal_size().columns
 console_width = int(terminal_width * 0.75)
@@ -71,6 +71,29 @@ Ideal for analysts and data scientists working on MMM pipelines who need interpr
 """
     console.print(Panel(Markdown(banner), title="MARKET MIX MODELLING WITH AGENTIC AI", border_style="bright_yellow", title_align="left"))
 
+
+def show_instructions(commands: List[Tuple[str, str]], title: str = "Agent Control Panel"):
+    table = Table(
+        show_lines=False,
+        box=box.SIMPLE,
+        border_style="grey37"
+    )
+    
+    table.add_column("Command", style="bold sky_blue1", no_wrap=True)
+    table.add_column("Description", style="light_slate_grey")
+
+    for cmd, desc in commands:
+        table.add_row(cmd, desc)
+
+    panel = Panel.fit(
+        table,
+        title=f"[b yellow]{title}[/b yellow]",
+        border_style="grey54",
+    )
+
+    console.print(panel)
+
+
 def print_startup_info(agent_name: str, agent_description: str, is_interactive: bool):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     header = f"[bold plum1]Starting {agent_name}[/bold plum1]\n[grey50]{now}[/grey50]"
@@ -93,9 +116,10 @@ def display_task_list(tasks):
         table.add_row(task.task, task.suggested_tool, task.reason, str(task.sequence_id), str(task.dependency))
     console.print(Panel(table,title = "[magenta]TASKS TO PERFORM[/]"))
 
-def display_response(response: str, title:str="RESPONSE"):
+def display_response(response: str, title: str = "RESPONSE", title_align: str = "left", border_style: str = "light_goldenrod3"
+    ):
     md = Markdown(response)
-    console.print(Panel(md, title=title, border_style="light_goldenrod3", title_align="left"))
+    console.print(Panel(md, title=title, border_style=border_style, title_align=title_align))
     print("")
 
 
@@ -105,6 +129,7 @@ def print_dictionary(dict_obj:dict, title:str = "Dict"):
     table.add_column("Value", style="grey82")
     for k, v in dict_obj.items():
         table.add_row(str(k), str(v))
+    console.print("")   
     console.print(table)   
 
 def print_items_as_panels(items, border_style="grey50", expand=False, column_first=False):

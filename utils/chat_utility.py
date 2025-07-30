@@ -43,7 +43,7 @@ def take_user_feedback(task, prompt_suffix = "Do you approve? (yes / suggest cha
     while True:
         response = Prompt.ask(f"[grey39]{prompt_suffix}[/]", default="Y").strip()
         if response.lower() in ("yes", "y"):
-            console.print(f"[dark_sea_green2]User approved {task} to proceed.[/]")
+            console.print(f"[chartreuse2]User approved {task} to proceed.[/]")
             return True, None
         elif response:
             console.print(f"[tan]User suggested changes: {response}.[/]")
@@ -58,7 +58,7 @@ def ask_user_approval(agent_name, prompt_suffix="Do you approve? (yes / suggest 
     while True:
         response = Prompt.ask(f"[grey39]{prompt_suffix}[/]", default="Y").strip()
         if response.lower() in ("yes", "y"):
-            console.print(f"[dark_sea_green2]User approved {agent_name} to proceed.[/]")
+            console.print(f"[chartreuse2]User approved {agent_name} to proceed.[/]")
             return True, None
         elif response in ("no", "n"):
             console.print(f"[misty_rose3]User declined {agent_name}.[/]")
@@ -92,14 +92,17 @@ def tool_running_response(tool, args, result):
     console.print(f"[grey35]> Arguments:[/] [light_yellow3]{args}[/]")
     console.print(f"[grey35]> Result:[/] [grey84]{str(result)[:50]}...[/]")
 
-def take_user_input(prompt: str) -> str:
-    return Prompt.ask(f"[yellow]{prompt}[/]", default="Y").strip()
+def take_user_input(prompt: str, default: Optional[str] = None):
+    if default is not None:
+        return Prompt.ask(f"[dark_olive_green1]{prompt}[/]", default=default).strip()
+    else:
+        return Prompt.ask(f"[dark_olive_green1]{prompt}[/]").strip()
 
-def parse_user_command(user_input: str, pattern:str):
+def parse_user_command(user_input: str, pattern:str = r"^/(\w+)(?:\s+(.*))?$"):
     match = re.match(pattern, user_input.strip(), re.IGNORECASE)
     if match:
         command = match.group(1).lower()
-        suggestion = match.group(2) or ""
+        suggestion = match.group(2).strip() if match.group(2) else ""
         return command, suggestion.strip()
     return None, None
 
@@ -209,12 +212,12 @@ def user_input_excel(df_to_edit:pd.DataFrame,file_path:str):
     if folder:
         os.makedirs(folder, exist_ok=True)
     df_to_edit.to_excel(file_path, index=False)
-    console.print(f"[green]Created new Excel file:[/green] [bold]{file_path}[/bold]")
+    console.print(f"\n[green3]Created new Excel file:[/] [bold]{file_path}[/bold]")
     console.print("\n[bold yellow]Opening the Excel file...[/bold yellow] Edit it and then come back here.")
     os.startfile(file_path) 
     Prompt.ask("\n[medium_purple3]Press ENTER when you're done editing the Excel file[/]", default="")
     updated_df = pd.read_excel(file_path)
-    console.print("\n[dark_green]Here's the updated data:[/]")
+    console.print("\n[green3]Here's the updated data:[/]\n")
     console.print(updated_df)
     updated_df.to_excel(file_path, index=False)
 
@@ -241,4 +244,4 @@ def parse_json_from_response(text: str) -> dict | None:
         except json.JSONDecodeError:
             return None
     return None
-    
+

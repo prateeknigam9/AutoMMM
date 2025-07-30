@@ -79,7 +79,7 @@ class DataEngineerAgent:
         response = chat_utility.build_message_structure(
             role="assistant", message="data and context data loaded in the memory"
         )
-        log("[dark_green]LOG: Data Loading completed[/]")
+        log("[green3]LOG: Data Loading completed[/]")
         return {"messages": [response]}
 
     def ColumnContextExtractNode(self, state: DataEngineerState):
@@ -121,7 +121,7 @@ class DataEngineerAgent:
             log(f"[medium_purple3]LOG: Saved column context to memory[/]")
         else:
             console.print(
-                "\n[sandy_brown]Opening the text file... Please edit and save, then return here.[/bold yellow]"
+                "\n[sandy_brown]Opening the text file... Please edit and save, then return here.[/sandy_brown]"
             )
             os.startfile(r"memory\column_context.txt")
             chat_utility.take_user_input(
@@ -132,7 +132,7 @@ class DataEngineerAgent:
             updated_text = f.read()
         DataStore.set_str("data_context", updated_text)
         log(f"[medium_purple3]LOG: Saved data context to memory[/]")
-        log("[dark_green]LOG: Column Context Extraction completed[/]")
+        log("[green3]LOG: Column Context Extraction completed[/]")
         assistant_message = chat_utility.build_message_structure(
             role="assistant", message="Saved data context to memory"
         )

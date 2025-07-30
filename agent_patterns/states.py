@@ -39,9 +39,18 @@ class DataAnalystState(TypedDict):
     data_summary: dict
     column_categories: dict
     user_feedback : Feedback | None
-    distinct_products : list
+    distinct_products : list[str]
     completed : bool
 
+class DataQualityAnalystState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    tool_results: List[Union[str, dict]]
+    qa_report : str
+    qa_report_path : str
+    completed : bool
+
+class DataInsightState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
 
 class DataTeamManagerState(TypedDict):
     messages : Annotated[List[AnyMessage], operator.add]
@@ -52,3 +61,5 @@ class DataTeamManagerState(TypedDict):
     qa_report : dict
     task : str
     next_agent : str
+    command : Literal['chat','run','start']
+

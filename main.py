@@ -99,6 +99,7 @@ theme_utility.print_logo()
 
 
 from agents.DataHandlingTeam.DataTeamManager import DataTeamManagerAgent
+from agent_patterns.agenticRAG.agentic_rag import AgenticRag
 
 def run_chatbot(user_input: str):
     config = {"configurable": {"thread_id": "1"}}
@@ -125,6 +126,14 @@ def run_chatbot(user_input: str):
     }
     result = agent.graph.invoke(state, config)
     return result
+    # rag_agent = AgenticRag(memory_folder_path = "memory")
+    # for chunk in rag_agent.graph.stream({"messages": [{"role": "user","content": user_input}]}):
+    #     for node, update in chunk.items():
+    #         print("Update from node", node)
+    #         print(update)
+    #         print("\n\n")
+
+    # return None
 
 async def main():
     state = None
@@ -140,3 +149,15 @@ if __name__ == "__main__":
     asyncio.run(main())
 
 
+
+# while True:
+#     rag_agent = AgenticRag(memory_folder_path = "memory")
+#     user_input = input("USER: ")
+#     if user_input == "break":
+#         break
+#     else:
+#         for chunk in rag_agent.graph.stream({"messages": [{"role": "user","content": user_input}]}):
+#             for node, update in chunk.items():
+#                 print("Update from node", node)
+#                 print(update)
+#                 print("\n\n")
