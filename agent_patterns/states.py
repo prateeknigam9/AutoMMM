@@ -1,11 +1,12 @@
 import operator
-from typing import Annotated, TypedDict, List, Literal, Any
+from typing import Annotated, TypedDict, List, Literal, Any, Optional
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
 from typing import Union
 
 class ToolAgentState(TypedDict):
     query: str
+    RephrasedQuery : str
     message: Annotated[List[AnyMessage], operator.add]
     task_tool_pairs: Any
     tool_response_list: List
@@ -27,5 +28,38 @@ class DataValidationState(TypedDict):
     messages : Annotated[List[AnyMessage], operator.add]
     data_summary: dict
     final_report:str
+    completed : bool
 
+class DataEngineerState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    completed : bool
+
+class DataAnalystState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    data_summary: dict
+    column_categories: dict
+    user_feedback : Feedback | None
+    distinct_products : list[str]
+    completed : bool
+
+class DataQualityAnalystState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    tool_results: List[Union[str, dict]]
+    qa_report : str
+    qa_report_path : str
+    completed : bool
+
+class DataInsightState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+
+class DataTeamManagerState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    data_loaded : bool
+    analysis_done : bool
+    quality_assurance :bool
+    data_analysis_report : dict
+    qa_report : dict
+    task : str
+    next_agent : str
+    command : Literal['chat','run','start']
 

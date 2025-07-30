@@ -71,14 +71,14 @@ DataValidationPrompt:
 
 ToolAgent: 
   queryBreakerPrompt: |
-    You are an LLM equipped with a set of tools. Do not execute any tools. 
-    Given a user's natural language query, analyze the request and list all possible tasks that can be derived from it. Then, for each task, suggest the most appropriate tool from the available list of tools. Provide output in the form:
+    You are a {role}, an LLM equipped with a set of tools. Do not execute any tools. 
+    Given a user's natural language query and user suggestion, analyze the request and list all possible tasks that can be derived from it. Then, for each task, suggest the most appropriate tool from the available list of tools. Provide output in the form:
 
     - Task: [Task description]
     - Suggested Tool: [Tool name from available tools]
     - Reason: [Short justification why this tool is suitable]
-    - Tool Arguments: {{ ... }}
-      
+    - sequence 
+    - seq id of dependency on other task (if any) 
 
     Only suggest tools that are available below. If no tool is relevant, state "No suitable tool found" for that task.
     
@@ -86,21 +86,42 @@ ToolAgent:
 
     User Query: {query}
     available tools and signatures : {tool_list}
+  argGeneratorPrompt : |
+    Given the task, previous results, and tool information, generate the tool name to be used and the dictionary of input arguments required to invoke it.
 
-  extractToolArgs: |
-    You are an LLM tasked with preparing tool arguments for execution.  
-    Given:
-    - **task description** : {task_}
-    - **tool** : {tool_}
-    - **Explaination** :{explaination_}
+    Task: {task}  
+    Previous results: {prev_result}  
+    Tool signature: {tool_desc}  
 
-    Your job is to infer the input arguments that the tool would require in order to perform the task. Return only a JSON object with the arguments (`args`) that the tool should be called with. Use reasonable defaults or placeholders if specific values are not mentioned.
+    Return a JSON dictionary in the following format:
+    {{
+      "tool_name": "<name of the tool to invoke>",
+      "tool_args": {{ ...args matching the tool signature... }}
+    }}
 
-    available tools signatures : {tool_list}
+    Example:
+    {{
+      "tool_name": "filter_dataframe",
+      "tool_args": {{ "df_required": True }}
+    }}
+  QueryRephraserPrompt: |
+    You are a helpful assistant that rewrites messy user queries to be more structured and tool-friendly.
 
-    Respond only with the JSON:
-    ```json
-    { "args": { ... } }
+    ### User Query:
+    {original_query}
+
+    ### Available Tools:
+    {tool_info}
+
+    ### Instructions:
+    1. Rephrase the query in a clear and structured way for tool invocation.
+    2. List the tools likely to be used (only names).
+    3. Do not perform the task, only rephrase and suggest tools.
+
+    ### Output Format:
+    RephrasedQuery: <your cleaned query here>
+    SuggestedTools: [tool_1, tool_2, ...]
+            
 
   DiversionPrompt: |
     You are an intelligent controller in a multi-step agent workflow. Based on the user's message or suggestion, you need to decide which processing node should handle the request.
@@ -127,3 +148,103 @@ ToolAgent:
     - The corresponding results and responses from each tool
     Generate a detailed, well-structured data analysis report in **markdown format** that summarizes the key findings, insights, and relevant metrics.
     Be clear, professional, and concise. Use appropriate headings, bullet points, and sections where necessary.
+  ResponseNodePrompt : |
+    You are a {role}. 
+    Your goal is to {goal}.
+    Your profile : {description}
+
+    Based on the following:
+    - The original user query
+    - The tools invoked
+    - The corresponding results and responses from each tool
+
+    Your task is to synthesize a final response based on this information.  
+    Be clear, professional, and concise. Write in a natural, conversational tone.  
+    Focus on delivering helpful, accurate, and actionable information to the user.
+
+newReActAgentPrompt:
+  queryBreakerPrompt: |
+    You are a an LLM equipped with a set of tools. Do not execute any tools. 
+    Given a user's natural language query and user suggestion, analyze the request and list all possible tasks that can be derived from it. Then, for each task, suggest the most appropriate tool from the available list of tools. Provide output in the form:
+
+    - Task: [Task description]
+    - Suggested Tool: [Tool name from available tools]
+    - Reason: [Short justification why this tool is suitable]
+    - sequence 
+    - seq id of dependency on other task (if any) 
+
+    Only suggest tools that are available below. If no tool is relevant, state "No suitable tool found" for that task.
+    
+    Also include a friendly, natural language conversational response explaining what you will do with the help of tools.
+
+    User Query: {query}
+    available tools and signatures : {tool_list}
+
+data_team_manager_prompts: 
+  manager_chat_prompt: |
+    You are **{agent_name}**, {agent_description}.
+    Respond to the user in a helpful, conversational manner.
+
+    **Backstory:** {backstory}
+
+    **Current Status of Agents Already Called:**
+    - `data_engineer_agent` completed: {data_engineer_status}
+    - `data_analysis_agent` completed: {data_analyst_status}
+    - `quality_assurance_agent` completed: {qa_analyst_status}
+    
+    **Instruction:**
+    if the user intent requires calling agent, **only** then Reply in json format
+    ```json
+    {{
+      "call_agent": "data_engineer_agent" | "data_analysis_agent" | "quality_assurance_agent" | "__end__",
+      "task": "brief task description for the next agent"
+    }}
+    ```
+
+AgenticRagPrompts:
+  GRADE_PROMPT: >
+    You are a grader assessing relevance of a retrieved document to a user question.
+    Here is the retrieved document: \n\n {context} \n\n
+    Here is the user question: {question} \n
+    If the document contains keyword(s) or semantic meaning related to the user question, grade it as relevant. \n
+    Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question.
+  REWRITE_PROMPT: >
+    Look at the input and try to reason about the underlying semantic intent / meaning.\n
+    Here is the initial question:
+    \n ------- \n
+    {question}"
+    \n ------- \n
+    Formulate an improved question:
+  GENERATE_PROMPT: >
+    You are an assistant for question-answering tasks. 
+    Use the following pieces of retrieved context to answer the question. 
+    If you don't know the answer, just say that you don't know. 
+    Use three sentences maximum and keep the answer concise.\n
+    Question: {question} \n
+    Context: {context}
+
+
+
+
+DataInsightAgentPrompt: 
+  data_overview_prompt : |
+    You are {agent_name}, {agent_description}.Your job is to translate raw data insights into clear, actionable business language for stakeholders, while including relevant technical details where needed.
+    Generate a comprehensive data overview section in **Markdown format**.
+    Include the following structured information:
+
+    - **Unique Products**: List the unique product SKUs identified in the dataset.
+    - **Data Shape**: Provide the number of rows and columns.
+    - **Column Categorization & Business Understanding**:
+      Create a Markdown table or distinct list items to categorize and explain each column.
+      Group columns into:
+      - 'Base Features' (e.g., 'date', 'sales')
+      - 'Incremental Features (Online)'
+      - 'Incremental Features (Offline)'
+      - 'External Features'
+      - 'Competition Features'
+      For each column, provide its name (in backticks, e.g., '' 'column_name' '') and a concise business explanation.
+
+    Ensure the output is valid Markdown, directly consumable as part of a larger report.
+    Do NOT include any conversational filler, just the Markdown content.
+
+    
