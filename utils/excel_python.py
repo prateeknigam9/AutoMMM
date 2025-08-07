@@ -15,6 +15,12 @@ product_col = column_config["product_col"]
 
 df = pd.read_excel(r"C:\Users\nigam\Documents\AutoMMM\data_to_model.xlsx", sheet_name = "Sheet1")
 
+
+df = DataStore.get_df("master_data")
+csv_path = "output/temp_master_data.csv"
+os.makedirs("output", exist_ok=True)
+df.to_csv(csv_path, index=False)
+
 base_file_path = r"C:\Users\nigam\Documents\AutoMMM\utils\BASE.xlsx"
 destination = r"C:\Users\nigam\Documents\AutoMMM\output\analysis.xlsx"
 
@@ -117,3 +123,5 @@ ws.Range(f"W{start_row}:W{end_row}").Formula = cols_W
 ws.Range(f"X{start_row}:X{end_row}").Formula = cols_X
 ws.Range(f"Y{start_row}:Y{end_row}").Formula = cols_Y
 
+if os.path.exists(csv_path):
+    os.remove(csv_path)

@@ -1,0 +1,24 @@
+{
+    "date_col": "weeks",
+    "product_col": "product_id",
+    "sales_cols": [
+        "units_sold",
+        "revenue"
+    ],
+    "oos_col": "oos",
+    "media_spends_cols": [
+        "branded_spends",
+        "nonbranded_spends",
+        "insta_spends",
+        "fb_spends"
+    ],
+    "media_clicks_cols": [
+        "branded_clicks_adstock_saturated",
+        "nonbranded_clicks_adstock_saturated",
+        "insta_clicks_adstock_saturated",
+        "fb_clicks_adstock_saturated"
+    ],
+    "control_variables": [
+        "event"
+    ]
+}
