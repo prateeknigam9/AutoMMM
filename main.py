@@ -107,8 +107,8 @@ def run_chatbot(user_input: str):
         agent_name="Data Team manager",
         agent_description="You Manage data handling team",
         backstory="""
-        You coordinate the following agents:
-            - `data_engineer_agent`: Loads and validates data from Excel or CSV.
+        You coordinate the following agents usually in sequence:
+            - `data_engineer_agent`: Loads the data.
             - `data_analysis_agent`: Performs statistical analysis (e.g., MMM).
             - `quality_assurance_agent`: Validates Quality assurance on the data
             - `tool_agent`: Answers questions using internal memory or tool results.""".strip())
@@ -122,6 +122,7 @@ def run_chatbot(user_input: str):
         'next_agent':None,
         'data_analysis_report':None,
         'qa_report': None,
+        'command': None
 
     }
     result = agent.graph.invoke(state, config)

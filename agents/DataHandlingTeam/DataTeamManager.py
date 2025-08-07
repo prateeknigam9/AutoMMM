@@ -9,8 +9,7 @@ from utils.memory_handler import DataStore
 from langchain_ollama import ChatOllama
 from pathlib import Path
 from langgraph.graph import StateGraph, START, END
-from pydantic import BaseModel, Field
-from typing import Optional, Literal
+from utils.theme_utility import console
 from langgraph.types import Command
 from langchain_core.prompts.chat import ChatPromptTemplate
 
@@ -82,15 +81,16 @@ class DataTeamManagerAgent:
             data_analyst_status = state['analysis_done'],
             qa_analyst_status = state['quality_assurance']
         )
-
+        
+        state['messages'] = state['messages'] + [
+                    chat_utility.build_message_structure(role = "system", message = prompt)
+                ]
         take_input_prompt = f"Hi, I am {self.agent_name}, How can i help you?"
-
         while True:            
-            if state["task"] is not None and state['next_agent'] == "supervisor":
-                    user_input = state["task"]
-                    state["task"] = None
-            else:
-                user_input = chat_utility.take_user_input(take_input_prompt)
+            user_input = chat_utility.take_user_input(take_input_prompt)
+            state['messages'] = state['messages'] + [
+                    chat_utility.build_message_structure(role = "user", message = user_input)
+                ]
             take_input_prompt = "USER"
             if user_input == "exit":
                 break
@@ -112,58 +112,55 @@ class DataTeamManagerAgent:
                 if command == "chat":
                     ... # TODO
         
-            messages = [
-                chat_utility.build_message_structure(role = "system", message = prompt),
-                chat_utility.build_message_structure(role = "user", message = user_input),
-            ]
-            response = self.llm.invoke(messages)
+            response = self.llm.invoke(state['messages'])
             theme_utility.display_response(response.content, title = self.agent_name)
             parsed = chat_utility.parse_json_from_response(response.content)
             if parsed and isinstance(parsed, dict) and "call_agent" in parsed:
                 if parsed['call_agent'] == "data_engineer_agent" and state['data_loaded'] == True:
+                    theme_utility.display_response("data is already loaded", title = self.agent_name)
                     return Command(
                         goto = "supervisor",
                         update = {
-                            "task": "data is already loaded"
+                            "messages": [chat_utility.build_message_structure(role = "assistant", message = "data is already loaded")]
                             }
                     )
-                    break
                 elif parsed['call_agent'] == "data_analyst_agent" and state['analysis_done'] == True:
+                    theme_utility.display_response("data analysis is already done and saved", title = self.agent_name)
                     return Command(
                         goto = "supervisor",
                         update = {
-                            "task": "data analysis is already done and saved"
+                            "messages": [chat_utility.build_message_structure(role = "assistant", message = "data analysis is already done and saved")]
                             }
                     )
-                    break
                 elif parsed['call_agent'] == "quality_assurance_agent" and state['quality_assurance'] == True:
+                    theme_utility.display_response("quality assurance is done", title = self.agent_name)
                     return Command(
                         goto = "supervisor",
                         update = {
-                            "task": "quality assurance is done"
+                            "messages": [chat_utility.build_message_structure(role = "assistant", message = "quality assurance is done")]
                             }
                     )
-                    break
                 else:
                     approved, feedback = chat_utility.ask_user_approval(agent_name = parsed['call_agent']) 
                     if approved is True:
+                        response = f"running {parsed['call_agent']} with input {parsed.get("task", "")}"
+                        messages = state['messages'] + [
+                            chat_utility.build_message_structure(role = "assistant", message = response)
+                        ]
                         return Command(
                             goto = parsed['call_agent'],
                             update = {
                                 "next_agent": parsed['call_agent'],
-                                "task": parsed.get("task", "")
+                                "task": parsed.get("task", ""),
+                                "messages" : messages
                                 }
                         )
-                        break
                     else:
-                        return Command(
-                            goto = "supervisor",
-                            update = {
-                                "next_agent": "supervisor",
-                                "task": f"user denied to move to {parsed['call_agent']}, with this input : {feedback}"
-                                }
-                        )
-                        break
+                        response = f"user denied to move to {parsed['call_agent']}, with this input : {feedback}"
+                        chat_utility.append_to_structure(state['messages'], role="assistant", message = response)
+            else:
+                chat_utility.append_to_structure(state['messages'], role="assistant", message = response.content)
+
     
     def data_engineer_node(self, state: DataTeamManagerState):
         theme_utility.print_startup_info(
@@ -180,7 +177,7 @@ class DataTeamManagerAgent:
         de_response = self.data_engineer.graph.invoke(inputs)
         if de_response['completed']:
             state['data_loaded'] = True
-        
+    
         if state['command'] == "start" and state['data_loaded'] == True:
             return Command(
                 goto = "data_analysis_agent",
@@ -204,7 +201,9 @@ class DataTeamManagerAgent:
                 goto = "supervisor",
                 update = {
                     "next_agent": "supervisor",
-                    "task": response.content
+                    "task": response.content,
+                    "messages": [chat_utility.build_message_structure(role = "assistant", message = response.content)],
+                    'data_loaded': True
                     }
             )
         else:
@@ -212,9 +211,15 @@ class DataTeamManagerAgent:
                 goto = "supervisor",
                 update = {
                     "next_agent": "supervisor",
-                    "task": feedback
+                    "task": feedback,
+                    "messages": [
+                        chat_utility.build_message_structure(role = "assistant", message = response.content),
+                        chat_utility.build_message_structure(role = "user", message = feedback)
+                        ],
+                    'data_loaded': True
                     }
             )
+    
 
     def data_analyst_node(self, state: DataTeamManagerState):
         theme_utility.print_startup_info(
@@ -255,14 +260,17 @@ class DataTeamManagerAgent:
         ]
         response = self.llm.invoke(messages)
         theme_utility.display_response(response.content, title = self.data_analyst.agent_name)
-        memory_context = self.generate_memory_context("memory/")
+        with console.status("[plum1] Generating and saving memory context...", spinner="dots"):
+            memory_context = self.generate_memory_context("memory/")
         approved, feedback = chat_utility.ask_user_approval(agent_name = self.data_analyst.agent_name, prompt_suffix="Use this input, or modify before sending to manager agent?") 
         if approved is True:
             return Command(
                 goto = "supervisor",
                 update = {
                     "next_agent": "supervisor",
-                    "task": response.content
+                    "task": response.content,
+                    "messages": [chat_utility.build_message_structure(role = "assistant", message = response.content)],
+                    "analysis_done": True
                     }
             )
         else:
@@ -270,7 +278,12 @@ class DataTeamManagerAgent:
                 goto = "supervisor",
                 update = {
                     "next_agent": "supervisor",
-                    "task": feedback
+                    "task": feedback,
+                    "messages": [
+                        chat_utility.build_message_structure(role = "assistant", message = response.content),
+                        chat_utility.build_message_structure(role = "user", message = feedback)
+                        ],
+                    "analysis_done": True
                     }
             )
     
@@ -290,8 +303,8 @@ class DataTeamManagerAgent:
         if qas_response['completed']:
             state['analysis_done'] == True
             state['qa_report'] = {
-                'qa_analyst_report': qas_response['final_report'],
-                'qa_analyst_report_path': qas_response['report_path']
+                'qa_analyst_report': qas_response['qa_report'],
+                'qa_analyst_report_path': qas_response['qa_report_path']
                 }           
         messages_from_data_quality_specialist = qas_response['messages']
         sysprompt = f"You are {self.qa_analyst.agent_name},{self.qa_analyst.agent_description} working for a {self.agent_name}, based on you history of messages and qa_report given by user, reply back to him on the status of your allotted task with a short summary"
@@ -308,7 +321,9 @@ class DataTeamManagerAgent:
                 goto = "supervisor",
                 update = {
                     "next_agent": "supervisor",
-                    "task": response.content
+                    "task": response.content,
+                    "messages": [chat_utility.build_message_structure(role = "assistant", message = response.content)],
+                    "quality_assurance":True
                     }
             )
         else:
@@ -316,7 +331,12 @@ class DataTeamManagerAgent:
                 goto = "supervisor",
                 update = {
                     "next_agent": "supervisor",
-                    "task": feedback
+                    "task": feedback,
+                    "messages": [
+                        chat_utility.build_message_structure(role = "assistant", message = response.content),
+                        chat_utility.build_message_structure(role = "user", message = feedback)
+                        ],
+                    "quality_assurance":True
                     }
             )
 
@@ -334,23 +354,7 @@ class DataTeamManagerAgent:
                 context.append(f"### {file_name}\n{content_text.strip()}")
 
         memory_context = "\n\n".join(context)
-        system_prompt = (
-            "You are a detail-oriented AI assistant specialized in data science workflows. "
-            "You have been provided with internal memory files from a market mix modeling dataset. "
-            "Your task is to transform the **entire raw content** into a **verbatim, fully faithful natural language description**, "
-            "with no summarization, abstraction, generalization, or formatting. "
-            "This description will later be split into chunks for embedding and retrieval, so the text must be purely **natural language prose** — "
-            "**no tables, no bullet points, and no structured formatting** such as JSON or markdown. "
-
-            "Retain all original numeric values (e.g., counts, percentages, prices, dates, years, column names, etc.) **exactly as they appear**, "
-            "but express them in complete sentences using clear, precise academic English. "
-            "Group the content logically into paragraphs based on themes like column categories, missing values, product summaries, and date coverage. "
-
-            "Your output should read like a thorough technical explanation or documentation — dense, well-written, and exhaustive — "
-            "but with **no information omitted, trimmed, reinterpreted, or simplified**. "
-            "The final result must allow downstream LLMs to correctly answer questions such as: "
-            "'How many rows are in the dataset?', 'What products are included?', or 'Which columns have missing values and how much?'. "
-        )
+        system_prompt = user_messages['generate_memory_context']
         response = self.llm.invoke([
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": (memory_context)}

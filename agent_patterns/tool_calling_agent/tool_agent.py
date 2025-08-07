@@ -5,7 +5,7 @@ from langgraph.types import Command
 from utils import utility
 from utils import chat_utility
 from utils import theme_utility
-from utils.theme_utility import console, log, SingleSpinner
+from utils.theme_utility import console, log
 from agent_patterns.states import ToolAgentState
 import ast
 import operator
@@ -97,7 +97,7 @@ class ToolAgent:
             theme_utility.display_task_list(response.task_tool_pairs)
             theme_utility.display_response(response.conversational_reply)
             log("[medium_purple3]LOG: queryBreakerNode generated response[/]")
-        approved, suggestion = chat_utility.take_user_feedback("query Breaker")
+        approved, suggestion = chat_utility.ask_user_approval("query Breaker")
         if approved is True:
             return Command(
                 goto="taskRunnerNode",
@@ -234,7 +234,7 @@ class ToolAgent:
             response = self.llm.invoke(prompt.strip())
         theme_utility.display_response(response.content)
         log(f"[medium_purple3]LOG: Generated tool response[/]")
-        user_approval, user_suggestion = chat_utility.take_user_feedback("taskRunnerNode")
+        user_approval, user_suggestion = chat_utility.ask_user_approval("taskRunnerNode")
         if user_approval is True:
             return Command(
                 goto="responseNode",
@@ -261,7 +261,7 @@ class ToolAgent:
             response = self.llm.invoke(prompt.strip())
         theme_utility.display_response(response.content)
         log("[medium_purple3]LOG: Final response generated[/]")
-        user_approval, user_suggestion = chat_utility.take_user_feedback(
+        user_approval, user_suggestion = chat_utility.ask_user_approval(
             "responseNode",
             prompt_suffix=(
                 "Do you approve this response?\n"
@@ -288,7 +288,7 @@ class ToolAgent:
                 )
             except Exception as e:
                 log(f"[medium_purple3]LOG: Failed to parse user suggestion ({user_suggestion}): {e}[/]")
-                user_approval, user_suggestion = chat_utility.take_user_feedback(
+                user_approval, user_suggestion = chat_utility.ask_user_approval(
                     "responseNode",
                     prompt_suffix=(
                         "Invalid input!\n"

@@ -49,17 +49,17 @@ class DataEngineerAgent:
             f"[plum1] Data Loading Node setting up...[/]\n", spinner="dots"
         ):
             console.print("")
-        file_path = chat_utility.take_user_input("Enter the path to your Excel file:")
+        file_path = chat_utility.take_user_input("Enter the path to your Excel file")
         while not os.path.isfile(file_path):
             file_path = chat_utility.take_user_input(
-                "Invalid path. Please re-enter Excel file path: "
+                "Invalid path. Please re-enter Excel file path"
             ).strip()
         excel_file = pd.ExcelFile(file_path)
-        console.print("[sandy_brown]sheet_names:[/] ", excel_file.sheet_names)
-        sheet_name = chat_utility.take_user_input("[sandy_brown]Sheet:[/] ").strip()
+        console.print("[sandy_brown]sheet_names[/] ", excel_file.sheet_names)
+        sheet_name = chat_utility.take_user_input("[sandy_brown]Sheet[/] ").strip()
         while sheet_name not in excel_file.sheet_names:
             sheet_name = chat_utility.take_user_input(
-                "Invalid sheet name. Please re-enter: "
+                "Invalid sheet name. Please re-enter "
             ).strip()
 
         DataStore.set_df("master_data", pd.read_excel(file_path, sheet_name))
