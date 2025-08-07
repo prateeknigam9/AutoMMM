@@ -61,5 +61,5 @@ class DataTeamManagerState(TypedDict):
     qa_report : dict
     task : str
     next_agent : str
-    command : Literal['chat','run','start']
+    command : Literal['chat','run','start',None]
 

@@ -33,14 +33,6 @@ def log(message: str):
         _file_console.write(full_msg + "\n")
         _file_console.flush()
 
-
-
-STYLES = {
-    "ai": Style(color="grey82", bgcolor="grey11"),
-    "assistant": Style(color="light_sky_blue1", bgcolor="grey11", bold=True),
-    "user": Style(color="plum1", bgcolor="grey11", bold=True),
-}
-
 def print_logo():
 
     ascii_art = """\n\n
@@ -146,20 +138,3 @@ def print_rich_table(rows, headers):
     console.print(table)
 
 
-_spinner_lock = asyncio.Lock()
-
-class SingleSpinner:
-    def __init__(self, status_text: str, spinner: str = "dots"):
-        self.status_text = status_text
-        self.spinner = spinner
-        self._status = None
-
-    async def __aenter__(self):
-        await _spinner_lock.acquire()
-        self._status = console.status(self.status_text, spinner=self.spinner)
-        self._status.__enter__()  # enter the rich context manager
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self._status.__exit__(exc_type, exc_val, exc_tb)
-        _spinner_lock.release()

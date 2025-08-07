@@ -7,9 +7,9 @@ load_dotenv()
 for env_key in ['GROQ_API_KEY', 'LANGSMITH_API_KEY', 'OPENAI_API_KEY']:
     os.environ[env_key] = os.getenv(env_key, '')
 
-os.environ['LANGSMITH_TRACING'] = "true"
-os.environ['LANGSMITH_ENDPOINT'] = "https://api.smith.langchain.com"
-os.environ['LANGSMITH_PROJECT'] = "data_analyst"
+# os.environ['LANGSMITH_TRACING'] = "true"
+# os.environ['LANGSMITH_ENDPOINT'] = "https://api.smith.langchain.com"
+# os.environ['LANGSMITH_PROJECT'] = "data_analyst"
 
 processed_config = {
     'master_data_path': "data_to_model.xlsx",

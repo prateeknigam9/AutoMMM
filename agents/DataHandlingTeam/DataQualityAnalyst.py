@@ -41,12 +41,19 @@ from utils import theme_utility
 from utils import chat_utility
 from utils.memory_handler import DataStore
 from utils.theme_utility import console, log
+import subprocess
+import pandas as pd
+import os
 
 DataValidationPrompt = utility.load_prompt_config(
     r"prompts\AgentPrompts.yaml",
     "DataValidationPrompt",
 )
 
+data_quality_analyst_messages = utility.load_prompt_config(
+    r"prompts\user_messages.yaml",
+    "data_quality_analyst",
+)
 
 class DataQualityAnalystAgent:
     def __init__(
@@ -64,6 +71,35 @@ class DataQualityAnalystAgent:
         self.log_path = log_path
         theme_utility.setup_console_logging(log_path)
         self.graph = self._build_graph()
+
+    def dataProfilerNode(self, state: DataQualityAnalystState):
+        python310_executable = chat_utility.take_user_input("python310_executable path")
+        df = DataStore.get_df("master_data")
+        csv_path = "output/temp_master_data.csv"
+        os.makedirs("output", exist_ok=True)
+        df.to_csv(csv_path, index=False)
+        try:
+            import ydata_profiling
+        except ImportError:
+            subprocess.check_call([python310_executable, "-m", "pip", "install", "ydata-profiling","--quiet"])
+            subprocess.check_call([python310_executable, "-m", "pip", "install", "openpyxl","--quiet"])
+
+        code = data_quality_analyst_messages['data_profiling_code'].format(
+            csv_path = csv_path,
+            data_profile_path = "output/data_profile_report.html"
+        )
+        try:
+            # Run the code using subprocess
+            subprocess.check_call([python310_executable, "-c", code])
+        except subprocess.CalledProcessError as e:
+            print(f"Subprocess failed with exit code {e.returncode}: {e}")
+        except FileNotFoundError:
+            print(f"Error: Python executable not found at {python310_executable}")
+        except Exception as e:
+            print(f"Error: {str(e)}")
+        if os.path.exists(csv_path):
+            os.remove(csv_path)
+
 
     def toolRunnerDataLevelNode(self, state: DataQualityAnalystState):
         log("[medium_purple3]LOG: Running tools to generate data validation report at[/] [turquoise4]Brand Level[/]")
@@ -195,13 +231,16 @@ class DataQualityAnalystAgent:
                  }
 
 
+
     def _build_graph(self):
         g = StateGraph(DataQualityAnalystState)
+        g.add_node("dataProfilerNode", self.dataProfilerNode)
         g.add_node("toolRunnerDataLevelNode", self.toolRunnerDataLevelNode)
         g.add_node("toolRunnerProductLevelNode", self.toolRunnerProductLevelNode)
         g.add_node("finalReportGeneratorNode", self.finalReportGeneratorNode)
 
-        g.add_edge(START, "toolRunnerDataLevelNode")
+        g.add_edge(START, "dataProfilerNode")
+        g.add_edge("dataProfilerNode", "toolRunnerDataLevelNode")
         g.add_edge("toolRunnerDataLevelNode", "toolRunnerProductLevelNode")
         g.add_edge("toolRunnerProductLevelNode", "finalReportGeneratorNode")
         g.add_edge("finalReportGeneratorNode", END)

@@ -9,5 +9,18 @@ data_team_manager:
     3. **Data Quality** - Validate brand-level and product-level data for modeling readiness.
 
     Once complete, you may use **chat mode** to explore or query the analysis.
+  
+  generate_memory_context: >
+    You are a detail-oriented AI assistant specialized in data science workflows.You have been provided with internal memory files from a market mix modeling dataset.Your task is to transform the **entire raw content** into a **verbatim, fully faithful natural language description**,with no summarization, abstraction, generalization, or formatting.This description will later be split into chunks for embedding and retrieval, so the text must be purely **natural language prose** —**no tables, no bullet points, and no structured formatting** such as JSON or markdown. 
+    Retain all original numeric values (e.g., counts, percentages, prices, dates, years, column names, etc.) **exactly as they appear**,but express them in complete sentences using clear, precise academic English.Group the content logically into paragraphs based on themes like column categories, missing values, product summaries, and date coverage. 
+    Your output should read like a thorough technical explanation or documentation — dense, well-written, and exhaustive —but with **no information omitted, trimmed, reinterpreted, or simplified**.The final result must allow downstream LLMs to correctly answer questions such as:'How many rows are in the dataset?', 'What products are included?', or 'Which columns have missing values and how much?'. 
 
-    
+data_quality_analyst:
+  data_profiling_code : |
+    from ydata_profiling import ProfileReport
+    import pandas as pd
+
+    df = pd.read_csv(r"{csv_path}")
+    profile = ProfileReport(df, title="Data Profiling Report")
+    profile.to_file("{data_profile_path}")
+    print(f"Profiling report saved to {data_profile_path}")
