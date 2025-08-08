@@ -29,9 +29,9 @@ import pandas as pd
 import os
 import shutil
 
-DataValidationPrompt = utility.load_prompt_config(
+DataAnalystPrompt = utility.load_prompt_config(
     r"prompts\AgentPrompts.yaml",
-    "DataValidationPrompt",
+    "DataAnalystPrompt",
 )
 
 
@@ -170,7 +170,7 @@ class DataAnalystAgent:
         ):
             llm_structured = self.llm.with_structured_output(ColumnCategoriesResponse)
             messages = chat_utility.build_message_structure(
-                role="system", message=DataValidationPrompt["ColumnCatogerizer"]
+                role="system", message=DataAnalystPrompt["ColumnCatogerizer"]
             )
             messages = [messages] + [
                 chat_utility.build_message_structure(
@@ -224,7 +224,7 @@ class DataAnalystAgent:
         else:
             feedback_llm = self.llm.with_structured_output(Feedback)
             message = chat_utility.build_message_structure(
-                role="system", message=DataValidationPrompt["ApprovalNode"]
+                role="system", message=DataAnalystPrompt["ApprovalNode"]
             )
             message = [message] + [
                 chat_utility.build_message_structure(role="user", message=suggestion)

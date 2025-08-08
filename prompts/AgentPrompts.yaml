@@ -1,74 +1,3 @@
-DataValidationPrompt: 
-  ColumnContextExtraction: |
-    List the Market Mix Modeling dataset columns as a JSON dictionary, 
-    with each column followed by a brief one-line description of its meaning in marketing mix context.
-    Use simple language.
-    Example:
-    {{
-        "date": "Observation date",
-        "product": "Product descriptions",
-        "sales": "Revenue in euros"
-    }}
-  ColumnCatogerizer: |
-    Categorize each column from all_columns into the schema below. 
-    Use column name semantics and prior message context if available.
-    Take feedback in consideration if any, given by (FEEDBACK)
-
-    # Schema:
-        column_categories:
-          date_col: str  
-          product_col: str  
-          sales_cols: List[str]  
-          oos_col: str  
-          media_spends_cols: List[str]  
-          media_clicks_cols: List[str]  
-          control_variables: List[str]
-        thought_process: str
-
-    
-    # Rules:
-      - One category per column; all columns must be classified.
-      - Use keywords:
-      - Spends: "spends", "budget", "cost"
-      - Clicks: "clicks", "ctr"
-      - Sales: "units", "revenue", "price"
-      - Control vars: "trend", "event", "season", "intercept", etc.
-      - date_col, product_col, oos_col = single string each; others can be lists.
-      - Include reasoning in thought_process.
-    
-  ApprovalNode: |
-    Act as an expert query interpreter.
-    For each user query, analyze intent and generate:
-      - category: one of ['approve', 'retry', 'retry with suggestion']
-      - feedback: what changes are needed (if any), per user input
-      - thought: reasoning on next steps and why
-
-  TypeChecks: |
-    You are a data validation assistant specializing in market mix modeling.
-    Given the domain context and column information, assess whether the data types of each column are appropriate.
-    Use available tools such as data_describe 
-    Determine whether each column's data type is correct or incorrect, based on its expected use in the context.
-  DuplicateChecks: |
-    You are a data validation assistant for market mix modeling.
-    Check the dataset for duplicate (date, product) pairs using the `duplicate_checker` tool.
-    In this context, each (date, product) pair should be unique. If duplicates exist, report them and explain why they may be problematic.
-  toolRunnerDataLevel: |
-    You are a data validation assistant specializing in market mix modeling. Given the domain context and available tools, perform the following checks on the dataset:
-
-    1. Use `generate_validation_summary` to provide the dataset's shape and column names for a quick structural overview.
-    2. Use `data_describe` to assess column data types and memory usage. Identify whether each type aligns with its role in modeling (e.g., date, numerical, categorical).
-    3. Use `validate_column_name_format` to check for invalid or improperly formatted column names (e.g., spaces, special characters).
-    4. Use `validate_date_format` to verify that the date column can be parsed correctly and identify any issues in date formatting.
-    5. Use `validate_data_types` to report column types explicitly and verify them against expected modeling inputs.
-    6. Use `duplicate_checker` to find duplicate combinations of `date` and `product_id`, which should be unique. Explain how duplicates can affect modeling accuracy.
-    7. Use `validate_time_granularity` to evaluate the consistency of date intervals and ensure that the dataset has regular weekly granularity.
-    8. Use `raise_validation_warnings` to flag critical issues like negative revenue or unusually high unit sales values.
-
-    Present the findings in a clear report, tool by tool. Explain the reason for each tool's output in the context of its impact on market mix modeling.
-  toolRunnerProductLevel: |
-    You are a data validation assistant for market mix modeling.
-    The following validation results are for product: {product_id}.
-
 ToolAgent: 
   queryBreakerPrompt: |
     You are a {role}, an LLM equipped with a set of tools. Do not execute any tools. 
@@ -162,7 +91,7 @@ ToolAgent:
     Be clear, professional, and concise. Write in a natural, conversational tone.  
     Focus on delivering helpful, accurate, and actionable information to the user.
 
-newReActAgentPrompt:
+ReActAgentPrompt:
   queryBreakerPrompt: |
     You are a an LLM equipped with a set of tools. Do not execute any tools. 
     Given a user's natural language query and user suggestion, analyze the request and list all possible tasks that can be derived from it. Then, for each task, suggest the most appropriate tool from the available list of tools. Provide output in the form:
@@ -200,6 +129,71 @@ data_team_manager_prompts:
       "task": "brief task description for the next agent"
     }}
     ```
+
+DataEngineerPrompt:
+  ColumnContextExtraction: |
+      List the Market Mix Modeling dataset columns as a JSON dictionary, 
+      with each column followed by a brief one-line description of its meaning in marketing mix context.
+      Use simple language.
+      Example:
+      {{
+          "date": "Observation date",
+          "product": "Product descriptions",
+          "sales": "Revenue in euros"
+      }}
+
+DataAnalystPrompt: 
+  ColumnCatogerizer: |
+    Categorize each column from all_columns into the schema below. 
+    Use column name semantics and prior message context if available.
+    Take feedback in consideration if any, given by (FEEDBACK)
+
+    # Schema:
+        column_categories:
+          date_col: str  
+          product_col: str  
+          sales_cols: List[str]  
+          oos_col: str  
+          media_spends_cols: List[str]  
+          media_clicks_cols: List[str]  
+          control_variables: List[str]
+        thought_process: str
+
+    
+    # Rules:
+      - One category per column; all columns must be classified.
+      - Use keywords:
+      - Spends: "spends", "budget", "cost"
+      - Clicks: "clicks", "ctr"
+      - Sales: "units", "revenue", "price"
+      - Control vars: "trend", "event", "season", "intercept", etc.
+      - date_col, product_col, oos_col = single string each; others can be lists.
+      - Include reasoning in thought_process.
+  
+  ApprovalNode: |
+    Act as an expert query interpreter.
+    For each user query, analyze intent and generate:
+      - category: one of ['approve', 'retry', 'retry with suggestion']
+      - feedback: what changes are needed (if any), per user input
+      - thought: reasoning on next steps and why
+
+DataQualityAnalystPrompt: 
+  toolRunnerDataLevel: |
+    You are a data validation assistant specializing in market mix modeling. Given the domain context and available tools, perform the following checks on the dataset:
+
+    1. Use `generate_validation_summary` to provide the dataset's shape and column names for a quick structural overview.
+    2. Use `data_describe` to assess column data types and memory usage. Identify whether each type aligns with its role in modeling (e.g., date, numerical, categorical).
+    3. Use `validate_column_name_format` to check for invalid or improperly formatted column names (e.g., spaces, special characters).
+    4. Use `validate_date_format` to verify that the date column can be parsed correctly and identify any issues in date formatting.
+    5. Use `validate_data_types` to report column types explicitly and verify them against expected modeling inputs.
+    6. Use `duplicate_checker` to find duplicate combinations of `date` and `product_id`, which should be unique. Explain how duplicates can affect modeling accuracy.
+    7. Use `validate_time_granularity` to evaluate the consistency of date intervals and ensure that the dataset has regular weekly granularity.
+    8. Use `raise_validation_warnings` to flag critical issues like negative revenue or unusually high unit sales values.
+
+    Present the findings in a clear report, tool by tool. Explain the reason for each tool's output in the context of its impact on market mix modeling.
+  toolRunnerProductLevel: |
+    You are a data validation assistant for market mix modeling.
+    The following validation results are for product: {product_id}.
 
 AgenticRagPrompts:
   GRADE_PROMPT: >

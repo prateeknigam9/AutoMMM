@@ -45,9 +45,9 @@ import subprocess
 import pandas as pd
 import os
 
-DataValidationPrompt = utility.load_prompt_config(
+DataQualityAnalystPrompt = utility.load_prompt_config(
     r"prompts\AgentPrompts.yaml",
-    "DataValidationPrompt",
+    "DataQualityAnalystPrompt",
 )
 
 data_quality_analyst_messages = utility.load_prompt_config(
@@ -124,7 +124,7 @@ class DataQualityAnalystAgent:
             model=self.model,
             log_path=self.log_path,
         )
-        prompt = DataValidationPrompt["toolRunnerDataLevel"].strip()
+        prompt = DataQualityAnalystPrompt["toolRunnerDataLevel"].strip()
         result = agent.graph_invoke(prompt)
 
         validation_report = {
@@ -248,7 +248,7 @@ class DataQualityAnalystAgent:
 
 
     def format_tool_outputs_for_prompt(self, product_id, tool_results):
-        prompt = DataValidationPrompt['toolRunnerProductLevel'].format(product_id = product_id)
+        prompt = DataQualityAnalystPrompt['toolRunnerProductLevel'].format(product_id = product_id)
         for tool_name, result in tool_results.items():
             prompt += f"\nTool: {tool_name}\nResult: {result}\n"
         prompt += "\nSummarize key data quality issues, potential impact on modeling, and what actions may be needed."
