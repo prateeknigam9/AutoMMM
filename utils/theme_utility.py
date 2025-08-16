@@ -137,4 +137,15 @@ def print_rich_table(rows, headers):
         table.add_row(*[str(cell) for cell in row])
     console.print(table)
 
+def rich_print_df(df):
+    table = Table(*df.columns, show_header=True, header_style="bold cyan")
+    [table.add_row(*map(str, row)) for row in df.itertuples(index=False)]
+    console.print(table)
 
+def print_stderr_as_exception(stderr: str):
+    """Pretty-print stderr like console.print_exception"""
+    if not stderr:
+        return
+    tb_text = Text(stderr, style="traceback.text")
+    panel = Panel(tb_text, title="[bold red]stderr[/bold red]", border_style="red")
+    console.print(panel)

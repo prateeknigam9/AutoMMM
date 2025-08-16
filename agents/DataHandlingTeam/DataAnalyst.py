@@ -11,7 +11,7 @@ from langchain_core.callbacks import streaming_stdout
 from langgraph.graph import START, END, StateGraph
 from langchain_ollama import ChatOllama
 from itertools import zip_longest
-
+import time
 from langgraph.types import Command
 from agent_patterns.states import DataAnalystState, Feedback
 from agent_patterns.structured_response import ColumnCategoriesResponse
@@ -22,6 +22,8 @@ from utils import chat_utility
 import pandas as pd
 from rich import print
 from utils.theme_utility import console, log
+from markdown_pdf import MarkdownPdf, Section
+from pathlib import Path
 
 import win32com.client as win32
 from openpyxl.utils import get_column_letter
@@ -265,7 +267,7 @@ class DataAnalystAgent:
     def generate_excel(self, state: DataAnalystState):
         log("[medium_purple3]LOG: Generate Excel for interactive Dashboard[/]")
         with console.status(f"[plum1] Generating interactive dashboard...[/]", spinner="dots"):
-            column_config_df = pd.read_excel(r"C:\Users\nigam\Documents\AutoMMM\user_inputs\column_config.xlsx")
+            column_config_df = pd.read_excel(r"user_inputs\column_config.xlsx")
             column_config = dict(zip(column_config_df["COLUMN_CONFIG"], column_config_df["COLUMN_NAME"]))
             date_col = column_config["date_col"]
             product_col = column_config["product_col"]
@@ -274,26 +276,31 @@ class DataAnalystAgent:
             csv_path = "output/temp_master_data.csv"
             os.makedirs("output", exist_ok=True)
             df.to_csv(csv_path, index=False)
-            base_file_path = r"C:\Users\nigam\Documents\AutoMMM\utils\BASE.xlsx"
-            destination = r"C:\Users\nigam\Documents\AutoMMM\output\analysis.xlsx"
+            base_file_path = "utils/BASE.xlsx"
+            destination = "output/analysis.xlsx"
             shutil.copy(base_file_path, destination)
             df["KEY"] = (df[product_col].astype(str) + (df[date_col] - pd.Timestamp("1899-12-30")).dt.days.astype(str))
             cols = ["KEY"] + [col for col in df.columns if col != "KEY"]
             df = df[cols]
+            log("[green3]LOG: Base File Copied[/]")
         
-        wb_path = r"C:\Users\nigam\Documents\AutoMMM\output\analysis.xlsx"
+        wb_path = os.path.abspath("output/analysis.xlsx")
 
         sheet_name = "raw_data"
         with pd.ExcelWriter(wb_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
             df.to_excel(writer, index=False, sheet_name=sheet_name)
 
-        xlApp = win32.Dispatch('Excel.Application')
+        
+        time.sleep(1)
+        # xlApp = win32.Dispatch('Excel.Application')
+        xlApp = win32.gencache.EnsureDispatch('Excel.Application')
         xlApp.Visible = True
-        # Write lookup formulas
+
         rows, cols = df.shape
         last_letter = get_column_letter(cols)
 
         wb = xlApp.Workbooks.Open(wb_path)
+
         # Backend Sheet
         try:
             ws_to_delete = wb.Sheets('backend')
@@ -372,7 +379,31 @@ class DataAnalystAgent:
 
         wb.Save()
         return state
+    
+    def save_reports(self, state: DataAnalystState):
+        log("[medium_purple3]LOG: Generate Excel for interactive Dashboard[/]")
+        with console.status(f"[plum1] Generating interactive dashboard...[/]", spinner="dots"):
+            memory_folder = Path("memory")
+            output_folder = Path("output")
+            output_folder.mkdir(exist_ok=True)
+        for mem_file in memory_folder.rglob("*"):
+            if mem_file.is_file():
+                content = mem_file.read_text()
+                base_name = mem_file.stem
 
+                prompt = DataAnalystPrompt['reportbuilderPrompt'].format(
+                    data_dict=f"{base_name}\n{content}"
+                )
+                response = self.llm.invoke(prompt)
+                report_md = response.content
+
+                pdf = MarkdownPdf(toc_level=2, optimize=True)
+                pdf.add_section(Section(report_md, toc=False))
+
+                output_path = output_folder / f"{base_name}.pdf"
+                pdf.save(str(output_path))
+                log(f"[green3]LOG: Saved report: {output_path}[/]")
+        return state
 
     def _build_graph(self):
         g = StateGraph(DataAnalystState)
@@ -381,6 +412,7 @@ class DataAnalystAgent:
         g.add_node("colCatApprovalNode", self.colCatApprovalNode)
         g.add_node("distinctProductNode", self.distinctProductNode)
         g.add_node("generate_excel", self.generate_excel)
+        g.add_node("save_reports", self.save_reports)
 
         g.add_edge(START, "DataSummaryNode")
         # g.add_edge("DataSummaryNode", "colCategorizeNode")
@@ -395,7 +427,8 @@ class DataAnalystAgent:
             },
         )
         g.add_edge("distinctProductNode", "generate_excel")
-        g.add_edge("generate_excel", END)
+        g.add_edge("generate_excel", "save_reports")
+        g.add_edge("save_reports", END)
         
         return g.compile(name=self.agent_name)
 

@@ -1,10 +1,12 @@
 from rich.prompt import Prompt
 from typing import Optional
 from utils.theme_utility import console
+from utils import theme_utility
 import pandas as pd
 import re
 import json
 import os
+import ast
 
 def build_message_structure(role: str, message :str):
     return {
@@ -75,7 +77,7 @@ def user_input_excel(df_to_edit:pd.DataFrame,file_path:str):
     Prompt.ask("\n[medium_purple3]Press ENTER when you're done editing the Excel file[/]", default="")
     updated_df = pd.read_excel(file_path)
     console.print("\n[green3]Here's the updated data:[/]\n")
-    console.print(updated_df)
+    theme_utility.rich_print_df(updated_df)
     updated_df.to_excel(file_path, index=False)
 
 def parse_json_from_response(text: str) -> dict | None:
@@ -84,6 +86,14 @@ def parse_json_from_response(text: str) -> dict | None:
         try:
             return json.loads(match.group(0))
         except json.JSONDecodeError:
+            pass
+        
+        try:
+            return ast.literal_eval(match.group(0))
+        except Exception:
             return None
     return None
+
+
+    
 

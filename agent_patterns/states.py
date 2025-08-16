@@ -63,3 +63,40 @@ class DataTeamManagerState(TypedDict):
     next_agent : str
     command : Literal['chat','run','start',None]
 
+
+ 
+
+class modelConfigSchema(BaseModel):
+    kpi : List[str]
+    prior_mean : List[int]
+    prior_sd : List[int]
+    is_random : List[Literal[0,1]]
+    lower_bound : List[float]
+    upper_bound: List[float]
+    compute_contribution : List[Literal[0,1]]	
+
+class ModellingTeamManagerState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    task : str
+    meta_model_config: dict
+    model_config : modelConfigSchema
+    config_interpreter : str
+    performance_analyst : str
+    coef_explainer: str
+    tuning_recommender: str
+    final_report: str
+
+class ConfigurationArchitectState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    meta_model_config: dict
+    model_config : modelConfigSchema
+
+class ModelEvaluatorState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    meta_model_config: dict
+    model_config : modelConfigSchema
+    config_interpreter : str
+    performance_analyst : str
+    coef_explainer: str
+    tuning_recommender: str
+    final_report: str

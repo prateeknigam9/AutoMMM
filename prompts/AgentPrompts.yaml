@@ -113,6 +113,7 @@ data_team_manager_prompts:
   manager_chat_prompt: |
     You are **{agent_name}**, {agent_description}.
     Respond to the user in a helpful, conversational manner.
+    If user asks question, try to answer from the memory.
 
     **Backstory:** {backstory}
 
@@ -176,6 +177,26 @@ DataAnalystPrompt:
       - category: one of ['approve', 'retry', 'retry with suggestion']
       - feedback: what changes are needed (if any), per user input
       - thought: reasoning on next steps and why
+
+  reportbuilderPrompt: |
+    You are a skilled data analyst assistant. A dictionary containing metadata and summary statistics for a dataset will follow.
+
+    First, re‑explain what you see in clear, concise terms—describe the meaning of key parts like the shape, missing values, frequent values, date range, etc., as if you’re interpreting the data for a colleague.
+
+    Then, present a polished **Markdown summary** of the dataset with:
+
+    - A brief, narrative-style introduction
+    - Organized headings (`##`, `###`)
+    - A mix of explanatory sentences and bullet points
+    - A clear table for structured parts like missing values or averages
+
+    But do **not** literally label your thoughts as steps. Just offer a smooth narrative that naturally transitions from understanding to summary.
+
+    Respond only with your explanation and the Markdown—no extra commentary or formatting instructions.
+
+    Here is the input metadata:
+    {data_dict}
+
 
 DataQualityAnalystPrompt: 
   toolRunnerDataLevel: |
@@ -242,3 +263,178 @@ DataInsightAgentPrompt:
     Do NOT include any conversational filler, just the Markdown content.
 
     
+ModellingTeamManagerPrompt:
+  manager_chat_prompt: |
+    You are **{agent_name}**, {agent_description}.
+    Respond to the user in a helpful, conversational manner.
+    If user asks question, try to answer from the memory, but you try to call respective agent instead of yourself solving the question
+
+    **Backstory:** {backstory}
+    
+    **Instruction:**
+    if the user intent requires calling agent, **only** then Reply in json format
+      ```json
+      {{
+        "call_agent": "configuration_architect_agent" | "model_evaluator_agent" | "model_tuner_agent",
+        "task": "brief task description for the next agent"
+      }}
+      ```
+
+  introdutionPrompt: |
+    Introduce yourself, You are {agent_name}, with your descriptions as : {agent_description}, and your backstory is : {agent_backstory}, do not ask any thing, just introduce yourself in short
+    Refer the task status done so far based on conversation history : {history}
+    Based on conversation so far, respond accordingly, and highlight steps and error
+    Also update if the error is resolved later on
+
+  metaConfigManagerPrompt: |
+    You are a conversational assistant to help configure a Python dictionary called meta_data_config.  
+    Your goal is to gather all required values from the user, asking clear and concise questions for any missing or unclear information.  
+    You must understand user responses, which may include multiple changes at once, and update the dictionary accordingly.  
+
+    Keep the conversation friendly and task-oriented, but only output the final Python dictionary in valid syntax when all fields are filled—no extra explanations or text.  
+
+    Default values (use unless the user specifies otherwise):
+    meta_data_config = {conf}
+
+    Rules:
+    - Preserve data types exactly
+    - Only change values if the user specifies
+    - Ask concise questions for missing info
+    - Track updates incrementally
+
+  ConfigInterpreterPrompt : |
+    You are an expert Market Mix Modeling (MMM) data scientist.
+
+    INPUT:
+    Model configuration: {conf}
+
+    TASK:
+    1. Summarize the configuration in clear, concise prose.
+    2. Describe:
+      - Priors (means, standard deviations) and what they imply about regularization strength.
+      - Bounds and their possible constraints on estimates.
+      - Random effects (hierarchical structure) and which variables have them.
+      - Which variables are flagged for contribution.
+    3. Highlight potential tuning concerns from the config itself:
+      - Priors too wide/tight
+      - Missing or overly restrictive bounds
+      - Inconsistent contribution flags
+      - Unnecessary/absent random effects
+
+    OUTPUT:
+    Return only a "Configuration Overview" section suitable for a technical tuning report.
+    Keep it under 300 words.
+
+  PerformanceAnalystPrompt: |
+    You are an expert MMM data scientist.
+
+    INPUT:
+    Model performance data: {performance}
+
+    TASK:
+    1. Compare train vs validation metrics (RMSE, R², MAPE) at:
+      - Overall brand level
+      - Each product/tier level
+    2. Identify overfitting (train >> val) or underfitting (low R² in both).
+    3. Describe Actual vs Predicted fit and note any systematic bias patterns.
+    4. Call out the weakest and strongest performing tiers.
+
+    OUTPUT:
+    Return only a "Model Performance" section for a tuning-focused report.
+    Be explicit about whether current performance is acceptable or requires tuning attention.
+    Limit to 300 words.
+  
+  CoefExplainerPrompt: |
+    You are an expert MMM data scientist.
+
+    INPUT:
+    Model coefficients summary (JSON format): {coef}
+
+    TASK:
+    1. Interpret posterior means, standard deviations, and credible intervals (HDIs).
+    2. Identify:
+      - Strong, credible effects (HDI entirely away from zero)
+      - Weak or unstable effects (wide HDI, low significance)
+      - Implausible or suspicious effects (unexpected sign/magnitude)
+    3. Mention convergence diagnostics if provided (e.g., r_hat, MCSE).
+    4. Highlight variables that might need re-specification (priors, feature engineering, contribution logic).
+
+    OUTPUT:
+    Return only a "Coefficients & Inference" section, optimized for tuning decision-making.
+    Limit to 350 words.
+
+  TuningRecommenderPrompt: |
+      You are an expert MMM data scientist.
+
+      INPUT:
+      Model coefficients summary (JSON format): {coef}
+
+      TASK:
+      1. Interpret posterior means, standard deviations, and credible intervals (HDIs).
+      2. Identify:
+        - Strong, credible effects (HDI entirely away from zero)
+        - Weak or unstable effects (wide HDI, low significance)
+        - Implausible or suspicious effects (unexpected sign/magnitude)
+      3. Mention convergence diagnostics if provided (e.g., r_hat, MCSE).
+      4. Highlight variables that might need re-specification (priors, feature engineering, contribution logic).
+
+      OUTPUT:
+      Return only a "Coefficients & Inference" section, optimized for tuning decision-making.
+      Limit to 350 words.
+    
+  RecommenderCombinerPrompt: |
+      You are compiling a hierarchical Bayesian MMM tuning report.
+
+      INPUTS:
+      Configuration Overview:
+      {config_interpreter_info}
+
+      Model Performance:
+      {performance_analyst_info}
+
+      Coefficients & Inference:
+      {coef_explainer_info}
+
+      Tuning Recommendation:
+      {tuning_recommender_info}
+
+      TASK:
+      Combine the four sections into a single cohesive narrative with the following headings:
+      1. Configuration Overview
+      2. Model Performance
+      3. Coefficients & Inference
+      4. Tuning Recommendation
+
+      Ensure smooth transitions and remove any redundant statements. Keep technical detail intact.
+      Do not alter the text, only fix minor formatting issues (spacing, bullet alignment).
+
+      OUTPUT:
+      Final tuning-ready report.
+    
+  TunerAgentPrompt: |
+      You are an expert MMM (Marketing Mix Modeling) data scientist.
+      Respond to the user in a helpful, conversational manner.
+      If user asks question, try to answer from the memory or refer backstory.
+
+      **Current Config: ** {config}
+      **Backstory:** {backstory}
+
+      **Instruction:**
+          if the user intent is confirm with decision, **only** then Reply in json format
+          ```json
+          {{
+            kpi : List[str]
+            prior_mean : List[int]
+            prior_sd : List[int]
+            is_random : List[Literal[0,1]]
+            lower_bound : List[float]
+            upper_bound: List[float]
+            compute_contribution : List[Literal[0,1]]	
+          }}
+          ```
+          Defined as : 
+          - kpi: selected columns
+          - prior_mean / prior_sd: small adjustments from current config
+          - is_random: 1 for random effect, 0 for fixed
+          - lower_bound / upper_bound: coefficient bounds
+          - compute_contribution: 1 to compute contribution, 0 for control variable
