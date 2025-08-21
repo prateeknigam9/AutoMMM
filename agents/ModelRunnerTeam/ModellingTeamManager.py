@@ -15,7 +15,8 @@ from utils.theme_utility import console
 from itertools import zip_longest
 from langgraph.types import Command
 from langchain_core.prompts.chat import ChatPromptTemplate
-
+import tempfile
+import shutil
 import glob
 import numpy as np
 import os
@@ -53,7 +54,7 @@ class ModellingTeamManagerAgent:
         self.graph = self.build_graph(ModellingTeamManagerState)
         self.backstory = backstory
         self.llm = ChatOllama(model = "llama3.1")
-        # self.llm = ChatOpenAI(model = "gpt-4o-mini")
+        self.openaillm = ChatOpenAI(model = "gpt-4o-mini")
         self.configuration_architect = ConfigurationArchitectAgent(
             agent_name="configuration Architect Agent",
             agent_description="Designs and manages model configuration, transformations, and readiness for Market Mix Modelling workflows.",
@@ -192,6 +193,7 @@ class ModellingTeamManagerAgent:
                     }
                 )
         state['messages'].append({"role": "assistant", "content": f"{self.hbr_runner_agent.agent_name} completed running the hbr model: {success}"})
+        os.startfile(Path(state['meta_model_config']['output_dir']))
         return Command(goto="model_evaluator_agent", update=state)
     
     def model_evaluator_node(self, state: ModellingTeamManagerState):
@@ -249,21 +251,24 @@ class ModellingTeamManagerAgent:
             )
 
     def model_tuner_node(self, state: ModellingTeamManagerState):
-        current_model_config = dict(state['model_config']).copy()
-        backstory = "\n\n ".join([state['config_interpreter'], state['performance_analyst'], state['coef_explainer'], f"assistant thought{state['tuning_recommender']}"])
+        current_model_config = dict(state['model_config'])
         tuner_conversation = []
-        sysPrompt = ManagerPrompt['TunerAgentPrompt'].format(
-            backstory = backstory,
-            config = current_model_config
-            )
+        # memory = DataStore.get_str("memory_context")
+        with open(r"memory\memory_context.txt", "r", encoding="utf-8") as f:
+            memory = f.read()
+
+        sysPrompt = ManagerPrompt['BrainStoringPrompt'].format(
+            memory = memory,
+            current_config = current_model_config
+        )
 
         tuner_conversation += [chat_utility.build_message_structure(role = "system", message = sysPrompt)]        
         
-        take_input_prompt = "USER: "        
+        take_input_prompt = "USER"
         feedback_message = None
         while True:
             if feedback_message is None:            
-                user_input = chat_utility.take_user_input(take_input_prompt)
+                user_input = chat_utility.take_user_input(take_input_prompt, default = "done")
             else:
                 user_input = feedback_message
                 feedback_message = None
@@ -273,29 +278,28 @@ class ModellingTeamManagerAgent:
 
             tuner_conversation += [chat_utility.build_message_structure(role="user", message=user_input)]
 
-            response = self.llm.invoke(tuner_conversation)
-            
-            parsed_dict = chat_utility.parse_json_from_response(response.content)
-            if parsed_dict and isinstance(parsed_dict, dict):
-                for key, value in parsed_dict.items():
-                    if key in current_model_config:
-                        current_model_config[key] = value
+            response = self.openaillm.invoke(tuner_conversation)       
 
-                if all(k in current_model_config for k in dict(state['model_config'])):
-                    theme_utility.display_response(response.content, title=self.agent_name)
-                    approved, message = chat_utility.ask_user_approval("Final Config")
-                    if approved is True:
-                        return {'model_config': current_model_config}
-                    else:
-                        feedback_message = message
-                        chat_utility.append_to_structure(state['messages'], role="user", message=message)
+            if user_input.lower().strip() == "done":
+                approval, _ = chat_utility.ask_user_approval("discussion board", "Do you want tuning?")
+                if approval is True:
+                    file_path = r"user_inputs\model_config.xlsx"
+                    model_config_df = pd.read_excel(file_path, sheet_name = 'input_features')
+                    chat_utility.user_input_excel(model_config_df, file_path=r"user_inputs\temp.xlsx")
+                    
+                    updated_model_config = pd.read_excel(r"user_inputs\temp.xlsx")
+                    with pd.ExcelWriter(file_path, mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
+                        updated_model_config.to_excel(writer, sheet_name="input_features", index=False)
+                    os.remove(r"user_inputs\temp.xlsx")
+                    return Command(goto = "hbr_runner_agent")
+                else:
+                    return Command(goto = "manager", update = {"messages", [tuner_conversation]})
+
             else:
                 theme_utility.display_response(response.content, title=self.agent_name)
-                chat_utility.append_to_structure(state['messages'], role="assistant", message=response.content)
+                chat_utility.append_to_structure(tuner_conversation, role="assistant", message=response.content)
 
-            take_input_prompt = "USER"
-
-        return state
+            take_input_prompt = "USER"                           
 
 
     def build_graph(self, state:ModellingTeamManagerState):
@@ -303,7 +307,7 @@ class ModellingTeamManagerAgent:
         workflow.add_node("manager", self.manager_agent_node)
         workflow.add_node("configuration_architect_agent", self.configuration_architect_node)
         
-        workflow.add_node("runner_agent", self.runner_agent)
+        workflow.add_node("hbr_runner_agent", self.runner_agent)
         workflow.add_node("model_evaluator_agent", self.model_evaluator_node)
         workflow.add_node("model_tuner_agent", self.model_tuner_node)
 

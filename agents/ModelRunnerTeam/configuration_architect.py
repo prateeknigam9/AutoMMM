@@ -115,6 +115,9 @@ class ConfigurationArchitectAgent:
 
                     if approved is True:
                         log("[green3]LOG: Final meta config approved by user. [/]")
+                        with open("user_inputs/config.py", "w", encoding="utf-8") as f:
+                            f.write("# Auto-generated configuration file\n\n")
+                            f.write("meta_data_config = " + repr(state['meta_model_config']) + "\n")
                         return Command(
                             goto = "model_config_manager",
                             update = {

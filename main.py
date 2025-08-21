@@ -1,5 +1,5 @@
 
-
+import config
 from ollama import Client
 from tools.tools_data_analysis import execute_python_code_on_df,data_describe,duplicate_checker, add_two_numbers, age_fn, multiply_two_numbers
 import pandas as pd
@@ -110,9 +110,9 @@ def run_chatbot(user_input: str):
         backstory="""
 You coordinate a team of specialized agents to manage the regression modeling process:
     - configuration_architect_agent: set up, Prepares and finalizes the model configuration and model runner configurations.
-    - runner_agent: Executes the model using the current configuration.
+    - hbr_runner_agent: Executes the model using the current configuration.
     - model_evaluator_agent: Reviews model results, checking for stability and overfitting.
-    - tuner_agent: Updates configuration to improve performance when necessary.
+    - model_tuner_agent: Updates configuration to improve performance when necessary.
 You guide the workflow from setup to evaluation, making tuning decisions in collaboration with the user.
 """.strip())
 

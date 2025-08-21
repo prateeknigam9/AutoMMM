@@ -130,7 +130,7 @@ class DataEngineerAgent:
 
         with open(r"memory\column_context.txt", "r", encoding="utf-8") as f:
             updated_text = f.read()
-        DataStore.set_str("data_context", updated_text)
+        DataStore.set_str("column_context", updated_text)
         log(f"[medium_purple3]LOG: Saved data context to memory[/]")
         log("[green3]LOG: Column Context Extraction completed[/]")
         assistant_message = chat_utility.build_message_structure(
