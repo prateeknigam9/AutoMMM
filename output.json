@@ -1,0 +1,8 @@
+{"kpi":"intercept","prior_mean":0,"prior_sd":100,"is_random":1,"lower_bound":null,"upper_bound":null,"compute_contribution":0}
+{"kpi":"log_price","prior_mean":0,"prior_sd":100,"is_random":1,"lower_bound":null,"upper_bound":null,"compute_contribution":0}
+{"kpi":"branded_clicks_adstock_saturated","prior_mean":0,"prior_sd":100,"is_random":1,"lower_bound":null,"upper_bound":null,"compute_contribution":1}
+{"kpi":"nonbranded_clicks_adstock_saturated","prior_mean":0,"prior_sd":100,"is_random":1,"lower_bound":null,"upper_bound":null,"compute_contribution":1}
+{"kpi":"insta_clicks_adstock_saturated","prior_mean":0,"prior_sd":100,"is_random":0,"lower_bound":null,"upper_bound":null,"compute_contribution":1}
+{"kpi":"fb_clicks_adstock_saturated","prior_mean":0,"prior_sd":100,"is_random":0,"lower_bound":null,"upper_bound":null,"compute_contribution":1}
+{"kpi":"event","prior_mean":0,"prior_sd":100,"is_random":0,"lower_bound":null,"upper_bound":null,"compute_contribution":0}
+{"kpi":"oos","prior_mean":0,"prior_sd":100,"is_random":1,"lower_bound":null,"upper_bound":null,"compute_contribution":0}
