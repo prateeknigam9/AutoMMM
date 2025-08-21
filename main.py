@@ -1,7 +1,4 @@
-from pandas.core.internals import DataManager
-from agents.data_analysis_agent import DataValidationAgent
-from agent_patterns.structured_response import TypeValidationResponse
-from agent_patterns.tool_calling_agent.tool_agent import ToolAgent
+
 import config
 from ollama import Client
 from tools.tools_data_analysis import execute_python_code_on_df,data_describe,duplicate_checker, add_two_numbers, age_fn, multiply_two_numbers
@@ -9,12 +6,8 @@ import pandas as pd
 from utils.memory_handler import DataStore
 from utils import utility
 from utils import theme_utility
+import numpy as np
 from rich import print
-
-DataValidationPrompt = utility.load_prompt_config(
-    r"prompts\AgentPrompts.yaml",
-    "DataValidationPrompt",
-)
 
 
 from tools.tools_data_analysis import (
@@ -99,32 +92,44 @@ theme_utility.print_logo()
 
 
 from agents.DataHandlingTeam.DataTeamManager import DataTeamManagerAgent
+from agents.ModelRunnerTeam.ModellingTeamManager import ModellingTeamManagerAgent
 from agent_patterns.agenticRAG.agentic_rag import AgenticRag
+from agent_patterns.states import modelConfigSchema
 
 def run_chatbot(user_input: str):
-    config = {"configurable": {"thread_id": "1"}}
-    agent = DataTeamManagerAgent(
-        agent_name="Data Team manager",
-        agent_description="You Manage data handling team",
+    config = {"configurable": {"thread_id": "3"}}
+    agent = ModellingTeamManagerAgent(
+        agent_name="Modelling Team Manager",
+        agent_description=(
+                "You are working with a team of market mix modelling experts as a manager"
+                "Oversees the end-to-end hirarchial bayesian regression modeling workflow. "
+                "Works with the configuration_architect_agent to prepare and finalize model configuration, "
+                "then runs the HBR model, evaluates its performance, and, in collaboration with the user, "
+                "decides whether tuning is needed. If approved, tunes the model; otherwise, ends the process."
+            ),
         backstory="""
-        You coordinate the following agents usually in sequence:
-            - `data_engineer_agent`: Loads the data.
-            - `data_analysis_agent`: Performs statistical analysis (e.g., MMM).
-            - `quality_assurance_agent`: Validates Quality assurance on the data
-            - `tool_agent`: Answers questions using internal memory or tool results.""".strip())
+You coordinate a team of specialized agents to manage the regression modeling process:
+    - configuration_architect_agent: set up, Prepares and finalizes the model configuration and model runner configurations.
+    - hbr_runner_agent: Executes the model using the current configuration.
+    - model_evaluator_agent: Reviews model results, checking for stability and overfitting.
+    - model_tuner_agent: Updates configuration to improve performance when necessary.
+You guide the workflow from setup to evaluation, making tuning decisions in collaboration with the user.
+""".strip())
 
     state = {
         'messages':[{"role": "user", "content": ""}],
-        'data_loaded':False,
-        'analysis_done':False,
-        'quality_assurance':False,
-        'task': None,
-        'next_agent':None,
-        'data_analysis_report':None,
-        'qa_report': None,
-        'command': None
-
+        'meta_model_config': {},
+        'model_config': {
+            'kpi': ['intercept'],
+            'prior_mean': [0],
+            'prior_sd': [100],
+            'is_random': [1],
+            'lower_bound': [np.nan],
+            'upper_bound': [np.nan],
+            'compute_contribution': [0]
+        }
     }
+
     result = agent.graph.invoke(state, config)
     return result
     # rag_agent = AgenticRag(memory_folder_path = "memory")

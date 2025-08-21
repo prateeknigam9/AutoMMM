@@ -12,10 +12,6 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 import sys
 import os
 
-# ---- TEMP FIX FOR MODULE IMPORTS ----
-# Adds project root (3 levels up from this file) to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-
 seed: int = sum(map(ord, "mmm"))
 rng: np.random.Generator = np.random.default_rng(seed=seed)
 
@@ -218,8 +214,8 @@ def generate_synthetic_data(config: dict) -> pd.DataFrame:
 
 def main():
     synthetic_data = generate_synthetic_data(config=data_gen_params)
-    synthetic_data.to_excel("autommm/data/synthetic_data.xlsx", index=False)
-    print("Synthetic data saved to 'data/synthetic_data.xlsx'.")
+    synthetic_data.to_excel("synthetic_data.xlsx", index=False)
+    print("Synthetic data saved to 'synthetic_data.xlsx'.")
 
 
 if __name__ == "__main__":

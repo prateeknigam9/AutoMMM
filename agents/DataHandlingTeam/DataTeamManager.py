@@ -38,11 +38,6 @@ user_messages = utility.load_prompt_config(
 )
 
 
-# TODO : 
-# /chat with Memory + Tool calls - /CHAT 
-# /run Individuals - /RUN <Agent_name>
-# /auto sequential run - /START
-
 class DataTeamManagerAgent:
     def __init__(self, agent_name :str, agent_description:str, backstory:str = ""):
         self.agent_name = f"{agent_name}: Gaurav"
@@ -64,13 +59,6 @@ class DataTeamManagerAgent:
             agent_description="Validates brand-level and product-level data for modeling readiness by running automated checks, summarizing tool outputs, and generating a structured validation report.",
             model="llama3.1")
         
-        agent_commands = [
-        ("/CHAT", "Enter chat mode (memory + tool calls enabled)"),
-        ("/EXIT", "Exit chat mode and return to command interface"),
-        ("/RUN <Agent_name>", "Run an individual agent manually"),
-        ("/START <input>", "Run agents automatically in sequence using the input"),
-    ]
-        theme_utility.show_instructions(agent_commands)
       
     def chatNode(self, state:DataTeamManagerState):
         prompt = ManagerPrompt['manager_chat_prompt'].format(
@@ -94,23 +82,6 @@ class DataTeamManagerAgent:
             take_input_prompt = "USER"
             if user_input == "exit":
                 break
-            elif "/" in user_input:
-                command, input_text = chat_utility.parse_user_command(user_input)
-                if command == "start":
-                    theme_utility.display_response(user_messages['auto_start_mode'], title = self.agent_name)
-                    return Command(
-                            goto = "data_engineer_agent",
-                            update = {
-                                "next_agent": "data_engineer_agent",
-                                "task": "load the data",
-                                "command" : 'start'
-                                }
-                        )
-
-                if command == "run":
-                    ... # TODO
-                if command == "chat":
-                    ... # TODO
         
             response = self.llm.invoke(state['messages'])
             theme_utility.display_response(response.content, title = self.agent_name)
@@ -178,15 +149,6 @@ class DataTeamManagerAgent:
         if de_response['completed']:
             state['data_loaded'] = True
     
-        if state['command'] == "start" and state['data_loaded'] == True:
-            return Command(
-                goto = "data_analysis_agent",
-                update = {
-                    "next_agent": "data_analysis_agent",
-                    "task": "analyse the data",
-                    "command" : 'start'
-                    }
-            )
         messages_from_data_engineer = de_response['messages']
         sysprompt = f"You are {self.data_engineer.agent_name},{self.data_engineer.agent_description} , working for a {self.agent_name}, based on you history of messages given by user, reply back to him on completion or status of your allotted task."
         messages = [
@@ -240,17 +202,7 @@ class DataTeamManagerAgent:
                 'data_summary': da_response['data_summary'],
                 'column_categories': da_response['column_categories'],
                 'distinct_products': da_response['distinct_products'] 
-                } 
-
-        if state['command'] == "start" and state['analysis_done'] == True:
-            return Command(
-                goto = "quality_assurance_agent",
-                update = {
-                    "next_agent": "quality_assurance_agent",
-                    "task": "analyse the quality of the data",
-                    "command" : 'start'
-                    }
-            )          
+                }     
         messages_from_data_analyst = da_response['messages']
         sysprompt = f"You are {self.data_analyst.agent_name},{self.data_analyst.agent_description} working for a {self.agent_name}, based on you history of messages and data_report given by user, reply back to him on the status of your allotted task with a short summary"
         messages = [

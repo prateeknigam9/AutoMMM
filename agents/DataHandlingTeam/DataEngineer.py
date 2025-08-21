@@ -21,9 +21,9 @@ from utils.theme_utility import console, log
 import json
 import os
 
-DataValidationPrompt = utility.load_prompt_config(
+DataEngineerPrompt = utility.load_prompt_config(
     r"prompts\AgentPrompts.yaml",
-    "DataValidationPrompt",
+    "DataEngineerPrompt",
 )
 
 
@@ -89,7 +89,7 @@ class DataEngineerAgent:
         ):
             master_data = DataStore.get_df("master_data")
             data_context = DataStore.get_str("data_context")
-        prompt = DataValidationPrompt["ColumnContextExtraction"]
+        prompt = DataEngineerPrompt["ColumnContextExtraction"]
         prompt += f"\nContext: {data_context}"
         prompt += "\n\nPlease respond only with a valid JSON dictionary."
         message = chat_utility.build_message_structure(role="system", message=prompt)
@@ -130,7 +130,7 @@ class DataEngineerAgent:
 
         with open(r"memory\column_context.txt", "r", encoding="utf-8") as f:
             updated_text = f.read()
-        DataStore.set_str("data_context", updated_text)
+        DataStore.set_str("column_context", updated_text)
         log(f"[medium_purple3]LOG: Saved data context to memory[/]")
         log("[green3]LOG: Column Context Extraction completed[/]")
         assistant_message = chat_utility.build_message_structure(

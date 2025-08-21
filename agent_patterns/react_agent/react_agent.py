@@ -23,7 +23,7 @@ from rich import print
 
 ReActPrompts = utility.load_prompt_config(
     r"prompts\AgentPrompts.yaml",
-    "newReActAgentPrompt",
+    "ReActAgentPrompt",
 )
 
 
