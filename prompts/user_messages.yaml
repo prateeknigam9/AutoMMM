@@ -24,3 +24,109 @@ data_quality_analyst:
     profile = ProfileReport(df, title="Data Profiling Report")
     profile.to_file("{data_profile_path}")
     print(f"Profiling report saved to {data_profile_path}")
+
+# Contribution Team User Messages
+contribution_team_manager:
+  auto_start_mode: |
+    **Contribution Team Started in Auto Mode**
+
+    I will now execute the following steps sequentially:
+
+    1. **Contribution Analyst** - Analyze marketing contribution patterns and create reports.
+    2. **Contribution Interpreter** - Provide business insights and actionable recommendations.
+    3. **Contribution Validator** - Validate analysis quality and ensure consistency.
+
+    Once complete, you may use **chat mode** to explore or query the contribution analysis.
+  
+  generate_contribution_context: >
+    You are a detail-oriented AI assistant specialized in marketing contribution analysis workflows. You have been provided with internal memory files from a marketing contribution analysis dataset. Your task is to transform the **entire raw content** into a **verbatim, fully faithful natural language description**, with no summarization, abstraction, generalization, or formatting. This description will later be split into chunks for embedding and retrieval, so the text must be purely **natural language prose** — **no tables, no bullet points, and no structured formatting** such as JSON or markdown. 
+    Retain all original numeric values (e.g., contribution percentages, ROI values, efficiency scores, channel names, etc.) **exactly as they appear**, but express them in complete sentences using clear, precise academic English. Group the content logically into paragraphs based on themes like channel performance, temporal patterns, efficiency metrics, and optimization opportunities. 
+    Your output should read like a thorough technical explanation or documentation — dense, well-written, and exhaustive — but with **no information omitted, trimmed, reinterpreted, or simplified**. The final result must allow downstream LLMs to correctly answer questions such as: 'What are the top performing channels?', 'What is the overall efficiency score?', or 'What optimization opportunities were identified?'.
+
+contribution_analyst:
+  contribution_analysis_code: |
+    import pandas as pd
+    import numpy as np
+    from pathlib import Path
+    
+    # Load contribution data
+    output_dir = Path("output")
+    contribution_files = list(output_dir.glob("**/contri_*.xlsx"))
+    
+    if contribution_files:
+        latest_file = max(contribution_files, key=lambda x: x.stat().st_mtime)
+        df = pd.read_excel(latest_file)
+        print(f"Loaded contribution data from {latest_file}")
+        print(f"Data shape: {df.shape}")
+        print(f"Columns: {list(df.columns)}")
+    else:
+        print("No contribution files found, creating synthetic data for demonstration")
+
+contribution_interpreter:
+  interpretation_analysis_code: |
+    import json
+    from pathlib import Path
+    
+    # Load contribution analysis results
+    output_dir = Path("output")
+    analysis_report = output_dir / "contribution_analysis_report.json"
+    
+    if analysis_report.exists():
+        with open(analysis_report, 'r') as f:
+            data = json.load(f)
+        print(f"Loaded contribution analysis with {len(data)} key sections")
+    else:
+        print("No contribution analysis report found")
+
+contribution_validator:
+  validation_analysis_code: |
+    import json
+    from pathlib import Path
+    
+    # Load contribution interpretation results
+    output_dir = Path("output")
+    interpretation_report = output_dir / "contribution_interpretation_report.json"
+    
+    if interpretation_report.exists():
+        with open(interpretation_report, 'r') as f:
+            data = json.load(f)
+        print(f"Loaded contribution interpretation with {len(data)} key sections")
+    else:
+        print("No contribution interpretation report found")
+
+# CEO User Messages - Manages Complete Flow
+ceo_agent:
+  auto_start_mode: |
+    **CEO Agent Started in Auto Mode**
+
+    I will now orchestrate the complete AutoMMM workflow:
+
+    1. **Data Handling Team** - Load, analyze, and validate data for modeling
+    2. **Model Runner Team** - Configure, execute, and evaluate the HBR model
+    3. **Contribution Team** - Analyze marketing contribution patterns and provide insights
+
+    I will monitor progress, ensure quality, and provide executive oversight throughout the process.
+
+    Once complete, you may use **chat mode** to explore results or get project status updates.
+  
+  project_overview: |
+    **AutoMMM Project Overview Requested**
+
+    I will provide a comprehensive status update including:
+    - Current project phase and progress
+    - Team status and deliverables
+    - Key findings and insights
+    - Next steps and recommendations
+    
+    This will give you a complete executive view of the project.
+  
+  executive_summary: |
+    **Executive Summary Requested**
+
+    I will create a business-focused summary highlighting:
+    - Key project outcomes and deliverables
+    - Strategic insights and recommendations
+    - Business impact and ROI implications
+    - Next steps for stakeholders
+    
+    This summary will be suitable for executive presentations and decision-making.

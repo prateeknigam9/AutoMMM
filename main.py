@@ -93,41 +93,63 @@ theme_utility.print_logo()
 
 from agents.DataHandlingTeam.DataTeamManager import DataTeamManagerAgent
 from agents.ModelRunnerTeam.ModellingTeamManager import ModellingTeamManagerAgent
+from agents.ContributionTeam.ContributionTeamManager import ContributionTeamManagerAgent
+from agents.CEO.CEOAgent import CEOAgent
 from agent_patterns.agenticRAG.agentic_rag import AgenticRag
 from agent_patterns.states import modelConfigSchema
 
 def run_chatbot(user_input: str):
     config = {"configurable": {"thread_id": "3"}}
-    agent = ModellingTeamManagerAgent(
-        agent_name="Modelling Team Manager",
+    
+    # CEO Agent - Main entry point for complete AutoMMM workflow
+    agent = CEOAgent(
+        agent_name="AutoMMM CEO",
         agent_description=(
-                "You are working with a team of market mix modelling experts as a manager"
-                "Oversees the end-to-end hirarchial bayesian regression modeling workflow. "
-                "Works with the configuration_architect_agent to prepare and finalize model configuration, "
-                "then runs the HBR model, evaluates its performance, and, in collaboration with the user, "
-                "decides whether tuning is needed. If approved, tunes the model; otherwise, ends the process."
-            ),
+            "You are the Chief Executive Officer of AutoMMM, overseeing the complete end-to-end workflow "
+            "from data preparation to final insights. You orchestrate three specialized teams: "
+            "Data Handling Team (data loading, analysis, quality assurance), "
+            "Model Runner Team (HBR model configuration, execution, evaluation), and "
+            "Contribution Team (marketing contribution analysis and business insights). "
+            "You ensure seamless handoffs between teams, monitor project progress and quality, "
+            "and provide executive-level oversight and strategic direction."
+        ),
         backstory="""
-You coordinate a team of specialized agents to manage the regression modeling process:
-    - configuration_architect_agent: set up, Prepares and finalizes the model configuration and model runner configurations.
-    - hbr_runner_agent: Executes the model using the current configuration.
-    - model_evaluator_agent: Reviews model results, checking for stability and overfitting.
-    - model_tuner_agent: Updates configuration to improve performance when necessary.
-You guide the workflow from setup to evaluation, making tuning decisions in collaboration with the user.
+You are the visionary leader of AutoMMM, a comprehensive Marketing Mix Modeling platform. 
+Your role is to orchestrate the complete workflow from raw data to actionable business insights.
+
+**Your Teams:**
+- **Data Handling Team**: Led by Gaurav, manages data loading, analysis, and quality assurance
+- **Model Runner Team**: Led by Jeevan, handles model configuration, execution, and evaluation  
+- **Contribution Team**: Led by specialized analysts, provides marketing attribution and ROI insights
+
+**Your Responsibilities:**
+- Ensure seamless workflow execution across all three teams
+- Monitor project progress, quality, and deliverables
+- Make strategic decisions on project direction and optimization
+- Provide executive-level insights and recommendations
+- Coordinate handoffs between teams and phases
+- Generate comprehensive project overviews and executive summaries
+
+You guide the entire AutoMMM process from data preparation through model execution to final business insights, 
+ensuring that each phase builds upon the previous one and delivers maximum value to stakeholders.
 """.strip())
 
+    # Initialize CEO state for complete workflow management
     state = {
-        'messages':[{"role": "user", "content": ""}],
-        'meta_model_config': {},
-        'model_config': {
-            'kpi': ['intercept'],
-            'prior_mean': [0],
-            'prior_sd': [100],
-            'is_random': [1],
-            'lower_bound': [np.nan],
-            'upper_bound': [np.nan],
-            'compute_contribution': [0]
-        }
+        'messages': [{"role": "user", "content": user_input}],
+        'data_team_status': False,
+        'modelling_team_status': False,
+        'contribution_team_status': False,
+        'overall_project_status': 'Not Started',
+        'current_phase': 'Initialization',
+        'next_phase': 'Data Preparation',
+        'data_team_report': {},
+        'modelling_team_report': {},
+        'contribution_team_report': {},
+        'final_executive_summary': '',
+        'task': user_input,
+        'next_team': '',
+        'command': None
     }
 
     result = agent.graph.invoke(state, config)
@@ -166,4 +188,4 @@ if __name__ == "__main__":
 #             for node, update in chunk.items():
 #                 print("Update from node", node)
 #                 print(update)
-#                 print("\n\n")
+#             print("\n\n")

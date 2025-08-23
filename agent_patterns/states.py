@@ -100,3 +100,57 @@ class ModelEvaluatorState(TypedDict):
     coef_explainer: str
     tuning_recommender: str
     final_report: str
+
+# Contribution Team States
+class ContributionAnalystState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    analysis_type: str
+    contribution_analysis_results: dict
+    contribution_report: dict
+    completed : bool
+
+class ContributionInterpreterState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    interpretation_type: str
+    contribution_interpretation_results: dict
+    business_insights: list
+    actionable_recommendations: list
+    marketing_optimization: dict
+    completed : bool
+
+class ContributionValidatorState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    validation_type: str
+    validation_results: dict
+    validation_report: dict
+    validation_report_path: str
+    completed : bool
+
+class ContributionTeamManagerState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    contribution_analysis_done : bool
+    contribution_interpretation_done : bool
+    contribution_validation_done : bool
+    contribution_analysis_report : dict
+    contribution_interpretation_report : dict
+    contribution_validation_report : dict
+    task : str
+    next_agent : str
+    command : Literal['chat','run','start',None]
+
+# CEO State - Manages Complete Flow
+class CEOState(TypedDict):
+    messages : Annotated[List[AnyMessage], operator.add]
+    data_team_status : bool
+    modelling_team_status : bool
+    contribution_team_status : bool
+    overall_project_status : str
+    current_phase : str
+    next_phase : str
+    data_team_report : dict
+    modelling_team_report : dict
+    contribution_team_report : dict
+    final_executive_summary : str
+    task : str
+    next_team : str
+    command : Literal['chat','run','start','overview','status',None]

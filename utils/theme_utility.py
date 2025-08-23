@@ -46,20 +46,21 @@ def print_logo():
     styled_text = Text(ascii_art, style="yellow", justify="center")
     console.print(styled_text+"\n")
     banner = """
-# AUTOMMM: CLI-Based Agentic AI System for Market Mix Modeling
+# AUTOMMM: AI-Powered Executive Workflow Orchestrator for Market Mix Modeling
 
 **Project Description**  
-AUTOMMM is a command-line based AI system designed to automate and validate marketing data workflows for Market Mix Modeling (MMM). Built with LangGraph and LangChain, it uses an intelligent multi-agent architecture that supports human oversight and transparent data handling.
+AUTOMMM is an enterprise-grade AI system that orchestrates complete end-to-end workflows for Market Mix Modeling (MMM) through intelligent multi-agent collaboration. Built with LangGraph and LangChain, it features a hierarchical CEO agent architecture that coordinates specialized teams for data preparation, model execution, and business insights generation.
 
 **Key Features**
-- Agentic design: Nodes for query breakdown, tool execution, retries
-- 30+ validation tools for product-level marketing, sales, and media data
-- Configurable logic via structured column mappings and metadata
-- Persistent context handling for column summaries and dataset memory
-- Clean, interactive CLI with logs, formatted output, and checkpoints
+- **Executive Orchestration**: CEO agent manages complete workflow lifecycle from data to insights
+- **Multi-Team Architecture**: Specialized teams for Data Handling, Model Execution, and Contribution Analysis
+- **Intelligent Workflow Management**: Automated phase transitions, progress tracking, and quality assurance
+- **Strategic Oversight**: Executive-level reporting, project overviews, and stakeholder summaries
+- **Seamless Integration**: Unified interface coordinating LangGraph workflows across all specialized agents
+- **Professional-Grade Coordination**: Human-in-the-loop control with full traceability and audit trails
 
 **Use Case**  
-Ideal for analysts and data scientists working on MMM pipelines who need interpretable, semi-automated preprocessing tools with human-in-the-loop control and full traceability.
+Perfect for marketing analytics teams, data scientists, and business stakeholders who need a comprehensive, executive-level solution for MMM workflows. Provides both automated execution and strategic oversight, making it ideal for organizations requiring professional-grade marketing mix modeling with transparent, coordinated workflows and executive-level insights.
 """
     console.print(Panel(Markdown(banner), title="MARKET MIX MODELLING WITH AGENTIC AI", border_style="bright_yellow", title_align="left"))
 

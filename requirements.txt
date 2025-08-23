@@ -25,3 +25,5 @@ ollama
 tabulate
 rich
 textual
+markdown-pdf
+pymc-marketing
