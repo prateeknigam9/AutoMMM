@@ -17,7 +17,7 @@ class RunnerAgent:
     def __init__(self,agent_name, agent_description,  config_path='config.yaml', runner_path='runner.py', log_path: str = "logs/hbr_runner_agent.log",):
         self.config_path = config_path
         self.runner_path = runner_path
-        self.agent_name = agent_name
+        self.agent_name = f"{agent_name}: Paras"
         self.agent_description = agent_description
         self.log_path = log_path
         theme_utility.setup_console_logging(log_path)

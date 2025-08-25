@@ -45,7 +45,7 @@ class DataAnalystAgent:
         model: str,
         log_path: str = "logs/data_analyst.log",
     ):
-        self.agent_name = agent_name
+        self.agent_name = f"{agent_name}: Shivam"
         self.agent_description = agent_description
 
         self.model = model
