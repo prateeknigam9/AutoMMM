@@ -36,7 +36,7 @@ user_messages = utility.load_prompt_config(
 
 class ContributionAnalystAgent:
     def __init__(self, agent_name :str, agent_description:str, model:str = "llama3.1"):
-        self.agent_name = agent_name
+        self.agent_name = f"{agent_name}: Harshita"
         self.agent_description = agent_description
         self.graph = self.build_graph(ContributionAnalystState)
         self.llm = ChatOllama(model = model)

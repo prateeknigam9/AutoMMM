@@ -63,7 +63,7 @@ class DataQualityAnalystAgent:
         model: str,
         log_path: str = "logs/agent.log",
     ):
-        self.agent_name = agent_name
+        self.agent_name = f"{agent_name}: Gaurav"
         self.agent_description = agent_description
 
         self.model = model

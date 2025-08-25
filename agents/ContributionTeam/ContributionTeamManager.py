@@ -40,7 +40,7 @@ user_messages = utility.load_prompt_config(
 
 class ContributionTeamManagerAgent:
     def __init__(self, agent_name :str, agent_description:str, backstory:str = ""):
-        self.agent_name = f"{agent_name}: Sarah"
+        self.agent_name = f"{agent_name}: Nitya"
         self.agent_description = agent_description
         self.graph = self.build_graph(ContributionTeamManagerState)
         self.backstory = backstory

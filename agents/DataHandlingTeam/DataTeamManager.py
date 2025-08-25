@@ -40,7 +40,7 @@ user_messages = utility.load_prompt_config(
 
 class DataTeamManagerAgent:
     def __init__(self, agent_name :str, agent_description:str, backstory:str = ""):
-        self.agent_name = f"{agent_name}: Gaurav"
+        self.agent_name = f"{agent_name}: Vibhor"
         self.agent_description = agent_description
         self.graph = self.build_graph(DataTeamManagerState)
         self.backstory = backstory

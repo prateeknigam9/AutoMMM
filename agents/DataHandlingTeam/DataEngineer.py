@@ -35,7 +35,7 @@ class DataEngineerAgent:
         model: str,
         log_path: str = "logs/data_engineer.log",
     ):
-        self.agent_name = agent_name
+        self.agent_name = f"{agent_name}: Pooja"
         self.agent_description = agent_description
         self.model = model
         self.llm = ChatOllama(model=self.model)

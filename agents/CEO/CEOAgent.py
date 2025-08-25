@@ -32,7 +32,7 @@ checkpointer = InMemorySaver()
 
 class CEOAgent:
     def __init__(self, agent_name: str, agent_description: str, backstory: str = ""):
-        self.agent_name = f"{agent_name}: CEO"
+        self.agent_name = f"{agent_name}: Sameer"
         self.agent_description = agent_description
         self.backstory = backstory
         self.llm = ChatOllama(model="llama3.1")

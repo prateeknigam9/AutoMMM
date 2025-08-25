@@ -48,7 +48,7 @@ class ConfigurationArchitectAgent:
         model: str,
         log_path: str = "logs/configuration_architect.log",
     ):
-        self.agent_name = agent_name
+        self.agent_name = f"{agent_name}: Mitul"
         self.agent_description = agent_description
 
         self.model = model
